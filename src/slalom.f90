@@ -70,12 +70,12 @@
 !!  <razm>  Filename for the relative azimuth angle data (real 4).
 !!  <cmask> Filename for the cloud mask (integer 2).
 !!  <mask>  Filename for the computation mask (integer 2).
-!!  <tau>   Filename for the optical thickness (output).
-!!  <aef>   Filename for the effective droplet radius (output)
-!!  <lwp>   Filename for the liquid water path (output)
-!!  <iwp>   Filename for the ice water path (output)
-!!  <ssa>   Filename for the single scattering albedo (output)
-!!  <pal>   Filename for the particle absorption length (output)
+!!  <tau>   Filename for the optical thickness (output), without .rst.
+!!  <aef>   Filename for the effective droplet radius (output), without .rst
+!!  <lwp>   Filename for the liquid water path (output), without .rst
+!!  <iwp>   Filename for the ice water path (output), without .rst
+!!  <ssa>   Filename for the single scattering albedo (output), without .rst
+!!  <pal>   Filename for the particle absorption length (output), without .rst
 !!  <cols>  Number of columns in the input binary datasets.
 !!  <rows>  Number of rows in the input binary datasets.
 !!  <alb>   Use albedo different from 0.0 (1 = yes, 0 = no).
@@ -1144,14 +1144,12 @@
       open(501,file=chBand01,access='direct',recl=liReclReal)
       read(501,rec=1) prgfNonAbs
       close(501)
-      !prgfNonAbs = prgfNonAbs / cos( prgfSZen*acos(-1.)/180.)
-      !da ca02-Daten verwendet werden, muss keine weitere Korrektur auf Sonnenzenit statt finden
-
+      prgfNonAbs = prgfNonAbs / cos( prgfSZen*acos(-1.)/180.)
+      
       open(501,file=chBand02,access='direct',recl=liReclReal)
       read(501,rec=1) prgfAbs
       close(501)
-      !prgfAbs = prgfAbs / cos(prgfSZen*acos(-1.)/180.)
-
+      
       if(bAlbedo) then
        open(501,file=chAlbedo01,access='direct',recl=liReclReal)
        read(501,rec=1) prgfNonAbsAlb
