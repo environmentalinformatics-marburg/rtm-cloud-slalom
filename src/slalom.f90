@@ -263,6 +263,8 @@
     integer(4) :: liReclByte !! Recordlength for satellite data binary input files
     integer(4) :: liReclInt !! Recordlength for satellite data binary input files
     integer(4) :: liReclReal !! Recordlength for satellite data binary input files
+    REAL(4) :: fCols !! Number of columns in binary input files used for subroutine FWWriteIdrisiMetadata 
+    REAL(4) :: fRows !! Number of rows in binary input files used for subroutine FWWriteIdrisiMetadata 
 
     real(8) :: fDummy        !! Dummy
     real(8) :: fNonAbs       !! Actual non-abs. band value
@@ -1142,12 +1144,13 @@
       open(501,file=chBand01,access='direct',recl=liReclReal)
       read(501,rec=1) prgfNonAbs
       close(501)
-      prgfNonAbs = prgfNonAbs / cos( prgfSZen*acos(-1.)/180.)
+      !prgfNonAbs = prgfNonAbs / cos( prgfSZen*acos(-1.)/180.)
+      !da ca02-Daten verwendet werden, muss keine weitere Korrektur auf Sonnenzenit statt finden
 
       open(501,file=chBand02,access='direct',recl=liReclReal)
       read(501,rec=1) prgfAbs
       close(501)
-      prgfAbs = prgfAbs / cos(prgfSZen*acos(-1.)/180.)
+      !prgfAbs = prgfAbs / cos(prgfSZen*acos(-1.)/180.)
 
       if(bAlbedo) then
        open(501,file=chAlbedo01,access='direct',recl=liReclReal)
@@ -1431,43 +1434,107 @@
 
 !   Write retrieval results to output binary files
 
+    fRows = liRows
+    fCols = liCols
 
     if(bBinary) then
-     open(501,file=chTau,access='direct',recl=liReclReal)
+     open(501,file=TRIM(chTau)//'.rst',access='direct',recl=liReclReal)
      write(501,rec=1) prgfTau
      close(501)
 
-     open(501,file=chAef,access='direct',recl=liReclReal)
+    call FWWriteIdrisiMetadata &  
+        ('lnx',trim(chTau),'SLALOM optical thickness', &
+         4,liCols,liRows, &
+         'plane',0,fCols,0,fRows, &
+         minval(prgfTau),maxval(prgfTau))
+
+
+     open(501,file=TRIM(chAef)//'.rst',access='direct',recl=liReclReal)
      write(501,rec=1) prgfAef
      close(501)
 
-     open(501,file=chLWP,access='direct',recl=liReclReal)
+    call FWWriteIdrisiMetadata &  
+        ('lnx',trim(chAef),'SLALOM effective radius', &
+         4,liCols,liRows, &
+         'plane',0,fCols,0,fRows, &
+         minval(prgfAef),maxval(prgfAef))
+
+
+     open(501,file=TRIM(chLWP)//'.rst',access='direct',recl=liReclReal)
      write(501,rec=1) prgfLWP
      close(501)
 
-     open(501,file=chSSA,access='direct',recl=liReclReal)
+    call FWWriteIdrisiMetadata &  
+        ('lnx',trim(chLWP),'SLALOM liquid water path', &
+         4,liCols,liRows, &
+         'plane',0,fCols,0,fRows, &
+         minval(prgfLWP),maxval(prgfLWP))
+
+
+     open(501,file=TRIM(chSSA)//'.rst',access='direct',recl=liReclReal)
      write(501,rec=1) prgfSSA
      close(501)
 
-     open(501,file=chPAL,access='direct',recl=liReclReal)
+    call FWWriteIdrisiMetadata &  
+        ('lnx',trim(chSSA),'SLALOM ssa', &
+         4,liCols,liRows, &
+         'plane',0,fCols,0,fRows, &
+         minval(prgfSSA),maxval(prgfSSA))
+
+     open(501,file=TRIM(chPAL)//'.rst',access='direct',recl=liReclReal)
      write(501,rec=1) prgfPAL
      close(501)
 
-     open(501,file=chCloudAlb,access='direct',recl=liReclReal)
+    call FWWriteIdrisiMetadata &  
+        ('lnx',trim(chPAL),'SLALOM pal', &
+         4,liCols,liRows, &
+         'plane',0,fCols,0,fRows, &
+         minval(prgfPAL),maxval(prgfPAL))
+
+
+     open(501,file=TRIM(chCloudAlb)//'.rst',access='direct',recl=liReclReal)
      write(501,rec=1) prgfCloudAlb
      close(501)
 
-     open(501,file=chCGT,access='direct',recl=liReclReal)
+    call FWWriteIdrisiMetadata &  
+        ('lnx',trim(chCloudAlb),'SLALOM cloud alb', &
+         4,liCols,liRows, &
+         'plane',0,fCols,0,fRows, &
+         minval(prgfCloudAlb),maxval(prgfCloudAlb))
+
+
+     open(501,file=TRIM(chCGT)//'.rst',access='direct',recl=liReclReal)
      write(501,rec=1) prgfCGT
      close(501)
 
-     open(501,file=chCDC,access='direct',recl=liReclReal)
+    call FWWriteIdrisiMetadata &  
+        ('lnx',trim(chCGT),'SLALOM cgt', &
+         4,liCols,liRows, &
+         'plane',0,fCols,0,fRows, &
+         minval(prgfCGT),maxval(prgfCGT))
+
+
+     open(501,file=TRIM(chCDC)//'.rst',access='direct',recl=liReclReal)
      write(501,rec=1) prgfCDC
      close(501)
 
-     open(501,file=chDC,access='direct',recl=liReclReal)
+    call FWWriteIdrisiMetadata &  
+        ('lnx',trim(chCDC),'SLALOM cdc', &
+         4,liCols,liRows, &
+         'plane',0,fCols,0,fRows, &
+         minval(prgfCDC),maxval(prgfCDC))
+
+
+     open(501,file=TRIM(chDC)//'.rst',access='direct',recl=liReclReal)
      write(501,rec=1) prgfDC
      close(501)
+
+    call FWWriteIdrisiMetadata &  
+        ('lnx',trim(chDC),'SLALOM DC', &
+         4,liCols,liRows, &
+         'plane',0,fCols,0,fRows, &
+         minval(prgfDC),maxval(prgfDC))
+
 
 !   Write retrieval results to output ASCII files
     else
@@ -3780,4 +3847,423 @@
  
     return
     end subroutine CLOUD_3DInterpolation
+
+!###############################################################################
+
+subroutine  FWWriteIdrisiMetadata &  
+     (chOS,chIdrisiFile,chMetadataTitle, &               ! Input
+     iDatatype,liCols,liRows, &                         ! Input
+     chRefSystem,fRefMinX,fRefMaxX,fRefMinY,fRefMaxY, & ! Input
+     fDisMinValue,fDisMaxValue)                         ! Input
+
+  !*****************************************************************************************
+
+  !   Declaration of variables
+
+  !*****************************************************************************************
+
+  implicit none
+
+  logical         ::  bErr            !! error flag
+
+  character(len=1) :: chDirSep        !! directory separator
+  character(len=*) :: chOS            !! operating system ('lnx' or 'win')
+  character(len=*) ::  chRefSystem     !! Reference system
+  character(len=*) ::  chMetadataTitle !! Title of the Idrisi *.rst file
+  character(50)    ::  chMetadataTitlePrint !! Title of the Idrisi *.rst file
+  character(len=*) ::  chIdrisiFile    !! Idrisi file name (*.rst or *.rdc)
+  character(300)   ::  chIdrisiRDCFile !! Idrisi meta data file name (*.rdc)
+  character(300)   ::  chIdrisiRSTFile !! Idrisi data file name (*.rst only)
+
+  integer(2)      ::  iDatatype       !! Datatype of Idrisi file (1:byte 2:integer*2 4:real*4)
+  integer(2)      ::  iLength         !! Length of a character string
+  integer(2)      ::  iLengthTitle    !! Length of metadata file title
+  integer(2)      ::  iIndex          !! Position of search item in a character string
+
+  integer(4)      ::  liCols          !! Number of columns
+  integer(4)      ::  liRows          !! Number of rows
+
+  real(4)         ::  fRefMinX        !! Minimum reference system value in x direction
+  real(4)         ::  fRefMaxX        !! Maximum reference system value in x direction
+  real(4)         ::  fRefMinY        !! Minimum reference system value in y direction
+  real(4)         ::  fRefMaxY        !! Maximum reference system value in y direction
+  real(4)         ::  fMinValue       !! Minimum pixel value
+  real(4)         ::  fMaxValue       !! Maximum pixel value
+  real(4)         ::  fDisMinValue    !! Minimum pixel value for display
+  real(4)         ::  fDisMaxValue    !! Maximum pixel value for display
+
+
+  !*****************************************************************************************
+
+
+
+  !   Format
+
+  !*****************************************************************************************
+
+  ! windows formats
+  !   Byte metadata format
+950 format('file format : IDRISI Raster A.1',/, &
+       'file title  : ',a80,/, &
+       'data type   : ',a4,/, &
+       'file type   : binary',/, &
+       'columns     : ',i8,/, &
+       'rows        : ',i8,/, &
+       'ref. system : ',a7,/, &
+       'ref. units  : m',/, &
+       'unit dist.  : 1.0000000',/, &
+       'min. X      : ',f16.7,/, &
+       'max. X      : ',f16.7,/, &
+       'min. Y      : ',f16.7,/, &
+       'max. Y      : ',f16.7,/, &
+       'pos`n error : unknown',/, &
+       'resolution  : unknown',/, &
+       'min. value  : ',i8,/, &
+       'max. value  : ',i8,/, &
+       'display min : ',i8,/, &
+       'display max : ',i8,/, &
+       'value units : unspecified',/, &
+       'value error : unknown',/, &
+       'flag value  : none',/, &
+       'flag def`n  : none',/, &
+       'legend cats : 0')
+
+  !   Integer*2 metadata format
+951 format('file format : IDRISI Raster A.1',/, &
+       'file title  : ',a80,/, &
+       'data type   : ',a7,/, &
+       'file type   : binary',/, &
+       'columns     : ',i8,/, &
+       'rows        : ',i8,/, &
+       'ref. system : ',a7,/, &
+       'ref. units  : m',/, &
+       'unit dist.  : 1.0000000',/, &
+       'min. X      : ',f16.7,/, &
+       'max. X      : ',f16.7,/, &
+       'min. Y      : ',f16.7,/, &
+       'max. Y      : ',f16.7,/, &
+       'pos`n error : unknown',/, &
+       'resolution  : unknown',/, &
+       'min. value  : ',i8,/, &
+       'max. value  : ',i8,/, &
+       'display min : ',i8,/, &
+       'display max : ',i8,/, &
+       'value units : unspecified',/, &
+       'value error : unknown',/, &
+       'flag value  : none',/, &
+       'flag def`n  : none',/, &
+       'legend cats : 0')
+
+  !   Real*4 metadata format
+952 format('file format : IDRISI Raster A.1',/, &
+       'file title  : ',a80,/, &
+       'data type   : ',a4,/, &
+       'file type   : binary',/, &
+       'columns     : ',i8,/, &
+       'rows        : ',i8,/, &
+       'ref. system : ',a7,/, &
+       'ref. units  : m',/, &
+       'unit dist.  : 1.0000000',/, &
+       'min. X      : ',f16.7,/, &
+       'max. X      : ',f16.7,/, &
+       'min. Y      : ',f16.7,/, &
+       'max. Y      : ',f16.7,/, &
+       'pos`n error : unknown',/, &
+       'resolution  : unknown',/, &
+       'min. value  : ',f10.2,/, &
+       'max. value  : ',f10.2,/, &
+       'display min : ',f10.2,/, &
+       'display max : ',f10.2,/, &
+       'value units : unspecified',/, &
+       'value error : unknown',/, &
+       'flag value  : none',/, &
+       'flag def`n  : none',/, &
+       'legend cats : 0')
+
+  ! linux formats
+  !   Byte metadata format
+850 format('file format : IDRISI Raster A.1',a1,/, &
+       'file title  : ',a80,a1,/, &
+       'data type   : ',a4,a1,/, &
+       'file type   : binary',a1,/, &
+       'columns     : ',i8,a1,/, &
+       'rows        : ',i8,a1,/, &
+       'ref. system : ',a7,a1,/, &
+       'ref. units  : m',a1,/, &
+       'unit dist.  : 1.0000000',a1,/, &
+       'min. X      : ',f16.7,a1,/, &
+       'max. X      : ',f16.7,a1,/, &
+       'min. Y      : ',f16.7,a1,/, &
+       'max. Y      : ',f16.7,a1,/, &
+       'pos`n error : unknown',a1,/, &
+       'resolution  : unknown',a1,/, &
+       'min. value  : ',i8,a1,/, &
+       'max. value  : ',i8,a1,/, &
+       'display min : ',i8,a1,/, &
+       'display max : ',i8,a1,/, &
+       'value units : unspecified',a1,/, &
+       'value error : unknown',a1,/, &
+       'flag value  : none',a1,/, &
+       'flag def`n  : none',a1,/, &
+       'legend cats : 0',a1)
+
+  !   Integer*2 metadata format
+851 format('file format : IDRISI Raster A.1',a1,/, &
+       'file title  : ',a80,a1,/, &
+       'data type   : ',a7,a1,/, &
+       'file type   : binary',a1,/, &
+       'columns     : ',i8,a1,/, &
+       'rows        : ',i8,a1,/, &
+       'ref. system : ',a7,a1,/, &
+       'ref. units  : m',a1,/, &
+       'unit dist.  : 1.0000000',a1,/, &
+       'min. X      : ',f16.7,a1,/, &
+       'max. X      : ',f16.7,a1,/, &
+       'min. Y      : ',f16.7,a1,/, &
+       'max. Y      : ',f16.7,a1,/, &
+       'pos`n error : unknown',a1,/, &
+       'resolution  : unknown',a1,/, &
+       'min. value  : ',i8,a1,/, &
+       'max. value  : ',i8,a1,/, &
+       'display min : ',i8,a1,/, &
+       'display max : ',i8,a1,/, &
+       'value units : unspecified',a1,/, &
+       'value error : unknown',a1,/, &
+       'flag value  : none',a1,/, &
+       'flag def`n  : none',a1,/, &
+       'legend cats : 0',a1)
+
+  !   Real*4 metadata format
+852 format('file format : IDRISI Raster A.1',a1,/, &
+       'file title  : ',a80,a1,/, &
+       'data type   : ',a4,a1,/, &
+       'file type   : binary',a1,/, &
+       'columns     : ',i8,a1,/, &
+       'rows        : ',i8,a1,/, &
+       'ref. system : ',a7,a1,/, &
+       'ref. units  : m',a1,/, &
+       'unit dist.  : 1.0000000',a1,/, &
+       'min. X      : ',f16.7,a1,/, &
+       'max. X      : ',f16.7,a1,/, &
+       'min. Y      : ',f16.7,a1,/, &
+       'max. Y      : ',f16.7,a1,/, &
+       'pos`n error : unknown',a1,/, &
+       'resolution  : unknown',a1,/, &
+       'min. value  : ',f10.2,a1,/, &
+       'max. value  : ',f10.2,a1,/, &
+       'display min : ',f10.2,a1,/, &
+       'display max : ',f10.2,a1,/, &
+       'value units : unspecified',a1,/, &
+       'value error : unknown',a1,/, &
+       'flag value  : none',a1,/, &
+       'flag def`n  : none',a1,/, &
+       'legend cats : 0',a1)
+
+
+
+
+  !*****************************************************************************************
+
+  !   Write metadata to Idrisi *.rdc file
+
+  !*****************************************************************************************
+
+!   Set directory separator
+  if(chOS.EQ.'win') then
+     chDirSep = CHAR(92)
+  elseif(chOS.EQ.'lnx') then
+     chDirSep = CHAR(92)
+  else
+     bErr = .TRUE.
+     return
+  endif
+
+  !   Set filename of the actual Idrisi *.rdc file (check for lower/upper letters)
+  iIndex = index(chIdrisiFile,'.rdc')
+  if(iIndex.eq.0) then
+     iIndex = index(chIdrisiFile,'.RDC')
+  endif
+  if(iIndex.eq.0) then
+     iIndex = index(chIdrisiFile,'.rst')
+  endif
+  if(iIndex.eq.0) then
+     iIndex = index(chIdrisiFile,'.RST')
+  endif
+  if(iIndex.eq.0) then
+   chIdrisiRDCFile = trim(chIdrisiFile)//'.rdc'
+   chIdrisiRSTFile = trim(chIdrisiFile)//'.rst'
+  else
+   chIdrisiRDCFile = chIdrisiFile(1:iIndex)//'rdc'
+   chIdrisiRSTFile = chIdrisiFile(1:iIndex)//'rst'
+  endif 
+  !   Set title if not explicitly given
+  if(chMetadataTitle.eq.'') then
+     iLength = len_trim(chIdrisiRDCFile)
+     iIndex = index(chIdrisiRDCFile,chDirSep,BACK=.TRUE.)
+     chMetadataTitlePrint = chIdrisiRDCFile(iIndex:iLength)
+     iIndex = index(chMetadataTitle,'.rdc')
+     chMetadataTitlePrint = chIdrisiRDCFile(1:iIndex-1)
+  else
+     chMetadataTitlePrint = chMetadataTitle
+  endif
+   iLengthTitle = len_trim(chMetadataTitle)
+
+  !   Get extreme values and display extrema
+  fMinValue = fDisMinValue
+  fMaxValue = fDisMaxValue
+  if(fDisMinValue.eq.0.and.fDisMaxValue.eq.0) then
+     fDisMinValue = fMinValue
+     fDisMaxValue = fMaxValue
+  endif
+
+  !   Write data to the Idrisi *.rdc file with respect to the data format
+  open(500,file=trim(chIdrisiRDCFile))
+  !   write windows
+  if(chOS.EQ.'win') then
+     !   Byte binary
+     if(iDatatype.eq.1) then
+        write(500,950) &
+             chMetadataTitle, &
+             'byte', &
+             liCols, &
+             liRows, &
+             chRefSystem, &
+             fRefMinX, &
+             fRefMaxX, &
+             fRefMinY, &
+             fRefMaxY, &
+             int(fMinValue), &
+             int(fMaxValue), &
+             int(fDisMinValue), &
+             int(fDisMaxValue)
+
+        !   Integer*2 binary
+     elseif(iDatatype.eq.2) then
+        write(500,951) &
+             chMetadataTitle, &
+             'integer', &
+             liCols, &
+             liRows, &
+             chRefSystem, &
+             fRefMinX, &
+             fRefMaxX, &
+             fRefMinY, &
+             fRefMaxY, &
+             int(fMinValue), &
+             int(fMaxValue), &
+             int(fDisMinValue), &
+             int(fDisMaxValue)
+
+        !   Real*4 binary
+     else
+        write(500,952) &
+             chMetadataTitle, &
+             'real   ', &
+             liCols, &
+             liRows, &
+             chRefSystem, &
+             fRefMinX, &
+             fRefMaxX, &
+             fRefMinY, &
+             fRefMaxY, &
+             fMinValue, &
+             fMaxValue, &
+             fDisMinValue, &
+             fDisMaxValue
+     end if
+     ! write linux
+  elseif(chOS.EQ.'lnx') then
+     !   Byte binary
+     if(iDatatype.eq.1) then
+        write(500,850) &
+             CHAR(13), &
+             chMetadataTitlePrint,CHAR(13), &
+             'byte',CHAR(13), &
+             CHAR(13), &
+             liCols,CHAR(13), &
+             liRows,CHAR(13), &
+             chRefSystem,CHAR(13), &
+             CHAR(13), &
+             CHAR(13), &
+             fRefMinX,CHAR(13), &
+             fRefMaxX,CHAR(13), &
+             fRefMinY,CHAR(13), &
+             fRefMaxY,CHAR(13), &
+             CHAR(13), &
+             CHAR(13), &
+             int(fMinValue),CHAR(13), &
+             int(fMaxValue),CHAR(13), &
+             int(fDisMinValue),CHAR(13), &
+             int(fDisMaxValue),CHAR(13), &
+             CHAR(13), &
+             CHAR(13), &
+             CHAR(13), &
+             CHAR(13), &
+             CHAR(13)
+
+        !   Integer*2 binary
+     elseif(iDatatype.eq.2) then
+        write(500,851) &
+             CHAR(13), &
+             chMetadataTitlePrint,CHAR(13), &
+             'integer',CHAR(13), &
+             CHAR(13), &
+             liCols,CHAR(13), &
+             liRows,CHAR(13), &
+             chRefSystem,CHAR(13), &
+             CHAR(13), &
+             CHAR(13), &
+             fRefMinX,CHAR(13), &
+             fRefMaxX,CHAR(13), &
+             fRefMinY,CHAR(13), &
+             fRefMaxY,CHAR(13), &
+             CHAR(13), &
+             CHAR(13), &
+             int(fMinValue),CHAR(13), &
+             int(fMaxValue),CHAR(13), &
+             int(fDisMinValue),CHAR(13), &
+             int(fDisMaxValue),CHAR(13), &
+             CHAR(13), &
+             CHAR(13), &
+             CHAR(13), &
+             CHAR(13), &
+             CHAR(13)
+
+        !   Real*4 binary
+     else
+        write(500,852) &
+             CHAR(13), &
+             chMetadataTitlePrint,CHAR(13), &
+             'real   ',CHAR(13), &
+             CHAR(13), &
+             liCols,CHAR(13), &
+             liRows,CHAR(13), &
+             chRefSystem,CHAR(13), &
+             CHAR(13), &
+             CHAR(13), &
+             fRefMinX,CHAR(13), &
+             fRefMaxX,CHAR(13), &
+             fRefMinY,CHAR(13), &
+             fRefMaxY,CHAR(13), &
+             CHAR(13), &
+             CHAR(13), &
+             fMinValue,CHAR(13), &
+             fMaxValue,CHAR(13), &
+             fDisMinValue,CHAR(13), &
+             fDisMaxValue,CHAR(13), &
+             CHAR(13), &
+             CHAR(13), &
+             CHAR(13), &
+             CHAR(13), &
+             CHAR(13)
+     end if
+  endif
+
+  close(500)
+
+  return
+
+end subroutine FWWriteIdrisiMetadata
+
+
 
