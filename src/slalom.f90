@@ -1256,6 +1256,12 @@
      pofgLUT = 0.846061000000000000  ! 10µm, 1630nm
     elseif(pochLUT_RInf.eq.'lut_RInf_1630_aef_16.dat') then
      pofgLUT = 0.861364000000000000  ! 16µm, 1630nm
+    elseif(pochLUT_RInf.eq.'lut_RInf_1640_aef_06.dat') then
+     pofgLUT = 0.817130000000000000  ! 06µm, 1640nm
+    elseif(pochLUT_RInf.eq.'lut_RInf_1640_aef_10.dat') then
+     pofgLUT = 0.845895000000000000  ! 10µm, 1640nm
+    elseif(pochLUT_RInf.eq.'lut_RInf_1640_aef_16.dat') then
+     pofgLUT = 0.861287000000000000  ! 16µm, 1640nm
     elseif(pochLUT_RInf.eq.'lut_RInf_ice.dat') then
      pofgLUT = 0.752400000000000000  ! all aef
     else
@@ -1286,6 +1292,12 @@
      pofgLUT = 0.846061000000000000  ! 10µm, 1630nm
     elseif(pochLUT_RInf.eq.'lut_RInf_1630_aef_16.dat') then
      pofgLUT = 0.861364000000000000  ! 16µm, 1630nm
+    elseif(pochLUT_RInf.eq.'lut_RInf_1640_aef_06.dat') then
+     pofgLUT = 0.817130000000000000  ! 06µm, 1640nm
+    elseif(pochLUT_RInf.eq.'lut_RInf_1640_aef_10.dat') then
+     pofgLUT = 0.845895000000000000  ! 10µm, 1640nm
+    elseif(pochLUT_RInf.eq.'lut_RInf_1640_aef_16.dat') then
+     pofgLUT = 0.861287000000000000  ! 16µm, 1640nm
     elseif(pochLUT_RInf.eq.'lut_RInf_ice.dat') then
      pofgLUT = 0.752400000000000000  ! all aef
     else
@@ -1371,8 +1383,7 @@
 !    Uncomment for error propagation studies - end
 
 !    Check if actual pixel data is valid; if yes: compute
-     if(fNonAbs.ne.0.000.and.iCloud.gt.1.and.prgiMask(liCounter).eq.1) then
-
+     if(fNonAbs.ne.0.000.and.iCloud.gt.0.and.prgiMask(liCounter).eq.1) then
 !     Compute retrieval
       call SLALOM_Retrieve
 
@@ -1419,6 +1430,8 @@
 !!    print*, STIME
 
 !   Write retrieval results to output binary files
+
+
     if(bBinary) then
      open(501,file=chTau,access='direct',recl=liReclReal)
      write(501,rec=1) prgfTau
@@ -2695,6 +2708,8 @@
          fADiff=0.0
         elseif(fSSA.ge.0.999999) then
 !        fff1= fEscape0 at SSA=1.0
+
+
 !        fff2= fEscape  at SSA=1.0
 !        fff3= dRinf    at SSA=1.0
 !        dRinf=fff3-fy*fff1*fff2
