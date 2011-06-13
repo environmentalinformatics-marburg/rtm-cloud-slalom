@@ -260,7 +260,9 @@
     integer(4) :: liCols !! Number of columns in binary input files
     integer(4) :: liRows !! Number of rows in binary input files
     integer(4) :: liRuns !! Number of input value sets
-    integer(4) :: liRecl !! Recordlength for satellite data binary input files
+    integer(4) :: liReclByte !! Recordlength for satellite data binary input files
+    integer(4) :: liReclInt !! Recordlength for satellite data binary input files
+    integer(4) :: liReclReal !! Recordlength for satellite data binary input files
 
     real(8) :: fDummy        !! Dummy
     real(8) :: fNonAbs       !! Actual non-abs. band value
@@ -309,9 +311,6 @@
     real(4),allocatable :: prgfCGT(:)    !! Output cloud geometrical thickness
     real(4),allocatable :: prgfCDC(:)    !! Output columnar droplet concentration
     real(4),allocatable :: prgfDC(:)     !! Output droplet concentration
-    real(4),dimension(1) :: rgfLUTRInfSSAGridIn(30) !! Grid of lut_RInf.dat
-    real(4),dimension(1) :: rgfLUTKSSAGridIn(8)  !! Grid of lut_k.dat
-    real(4),dimension(1) :: rgfLUTRdInfSSAGridIn(9) !! Grid of lut_RdInf.dat
     real(4),dimension(1) :: rgfAefInput(2748620)
 
     real(8) :: drgC1630(5)  !! Parameters for wavelength 1.6300µm
@@ -328,8 +327,14 @@
     real(8),target ::  drgC0859(5)  !! Parameters for wavelength 0.8590µm
     real(8),pointer :: podrgC(:)    !! Pointer to parameters
 
+!   Uncomment for error propagation studies - start
+    character(8) :: STIME
+    integer(4) :: liErrorCounter !! Counter used for sensitivity study
+    real(4) :: fTauTarget, fAefTarget
+!   Uncomment for error propagation studies - end
+
 !   Modified for next version 2008-07-16
-!    real(4),dimension(1) :: rgfLUTgNonAbs(28)   !! LUT for g for non-abs. channel
+!    real(4),dimension(1) :: rgfLUTgNonAbs(28)!! LUT for g for non-abs. channel
 !    real(4),dimension(1) :: rgfLUTgAbs(28)   !! LUT for g for abs. channel
 !   Modified for next version 2008-07-16
 
@@ -345,6 +350,7 @@
 
     character(20) :: chVersion    !! Version of the program
     character(300) :: chControlFile !! Name of the control file
+    character(300) :: chLUTPath !! Path to LUT directory
 
     character(50), dimension(10) :: rgchOutFile !! Names of output files
 
@@ -446,11 +452,9 @@
     real(4) :: fy            !! Parameter (see publication)
 
     real(4),dimension(1) :: rgfLUTKMu0Grid(30) !! Grid (mu0) of lut_k
-    real(4),dimension(1) :: rgfLUTKSSAGrid(8)  !! Grid (ssa) of lut_k
     real(4),dimension(2) :: rgfLUTKSSA(30,8)   !! Grid (mu0,ssa) from lut_k
     real(4),dimension(1) :: rgfLUTKMuGrid(30)  !! Grid (mu) of lut_k
     real(4),dimension(1) :: rgfLUTRdInfMu0Grid(100) !! Grid (mu0) of lut_RdInf
-    real(4),dimension(1) :: rgfLUTRdInfSSAGrid(9) !! Grid (ssa) lut_RdInf
     real(4),dimension(2) :: rgfLUTRdInfSSA(100,9) !! Grid (mu0,ssa) lut_RdInf
 
     real(8) :: dRelativeMu0 !! Relative distance actual and gridded mu0 values
@@ -475,12 +479,10 @@
     real(4),pointer :: pofgLUT !! Pointer to fgLUT
     real(4),target ::  rgfLUTRInfSSAGrid(30)  !! Grid (ssa) of lut_RInf
     real(4),pointer :: porgfLUTRInfSSAGrid(:) !! Pointer to rgfLUTRInfSSAGrid
-
-!Uncomment the following lines for theoretical error studies
-!Start change
-!!!    character(8) :: STIME
-!!!    real(4) :: fTauTarget, fAefTarget
-!End change
+    real(4),target :: rgfLUTKSSAGrid(8)  !! Grid (ssa) of lut_k
+    real(4),pointer :: porgfLUTKSSAGrid(:)  !! Grid (ssa) of lut_k
+    real(4),target :: rgfLUTRdInfSSAGrid(9) !! Grid (ssa) lut_RdInf
+    real(4),pointer :: porgfLUTRdInfSSAGrid(:) !! Grid (ssa) lut_RdInf
 
 !   Grid of single-scattering albedo array in LUT K
     data rgfLUTRInfSSAGrid/0.800,0.810,0.820,0.830,0.840,0.850,0.860,0.870, &
@@ -565,7 +567,6 @@
     implicit none
 
     integer(4) :: liCounter !! Counter
-    integer(4) :: liErrorCounter !! Counter used for sensitivity study
 
 !******************************************************************************* 
 ! 
@@ -574,23 +575,17 @@
 !******************************************************************************* 
 
 !! Read input data file content
-950 format(3f7.2,f13.9,f8.5,f11.6,2f11.8)
 960 format('SZen   PZen   RelAzm Rna     Ra      Ana      Aa      TauIn   ' &
            'SSAIn   Tau    SSA     PAL     Aef     LWP          dTau         ' &
            'dBeta        error')
 
-!! Write output data file content
-970 format(3f7.2,4f8.5,f8.2,f8.5,f8.2,f8.5,3f8.2,f13.4,f13.4,f13.4)
-
 !   Only necessary for testing - start
-980 format('# SZen    PZen      RelAzm    Tau       Aef       TauIn     AefIn     TauError  AefError')
 990 format(9f10.3)
 !   Only necessary for testing - end
 
-!Uncomment the following lines for theoretical error studies
-!Start change
-!!!999 format(9f10.3)
-!End change
+!   Uncomment for error propagation studies - start
+!!! 999 format(9f10.3)
+!   Uncomment for error propagation studies - end
 
 !******************************************************************************* 
 ! 
@@ -612,19 +607,20 @@
     print*, ' '
     print*, ' '
     print*, 'Usage if binary input (bi = 1):'
-    print*, 'slalom <bi> <cp> <w1> <w2> <lut1> <lut2> \'
+    print*, 'slalom <bi> <cp> <w1> <w2> <lutp> <lut1> <lut2> \'
     print*, '<band1> <band2> <szen> <pzen> <razm> <cmask> <mask> \'
     print*, '<tau> <aef> <lwp> <iwp> <pal> <cols> <rows> \'
     print*, '<ctype> <alb> <alb1> <alb2>'
     print*, ' '
     print*, 'Usage if ASCII input (bi = 0):'
-    print*, 'slalom <bi> <cp> <w1> <w2> <lut1> <lut2> <ctype> <indat> <outdat> <test>'
+    print*, 'slalom <bi> <cp> <w1> <w2> <lutp> <lut1> <lut2> <ctype> <indat> <outdat> <test>'
     print*, ' '
     print*, 'Parameters:'
     print*, '<bi>    Binary input (1 = binary, 0 = ASCII).'
     print*, '<cp>    Cloud phase (1 = water, 0 = ice).'
     print*, '<w1>    Wavelength (microns) of the non-absorbing channel (x.xxx).'
     print*, '<w2>    Wavelength (microns) of the absorbing channel (x.xxx).'
+    print*, '<lutp>  Path to the LUTs directory used by SLALOM.'
     print*, '<lut1>  Name of the LUT used for Rinf for the non-abs. channel.'
     print*, '<lut2>  Name of the LUT used for Rinf for the absorbing channel.'
     print*, '<band1> Filename for the non-absorbing channel data (real 4)'
@@ -727,141 +723,148 @@
       read(chWavelength02, '(f5.3)') fWavelength02
      endif
 
+!    Path to the LUTs directory used by SLALOM
+     call GETARG(5, chLUTPath)
+     if(chLUTPath.eq.'') then
+      print*, 'No path to LUTs directory given <lutp>.'
+      bError=.TRUE.
+     endif
+
 !    LUT Rinf for non-absorbing wavelength
-     call GETARG(5, chLUT_RInf)
+     call GETARG(6, chLUT_RInf)
      if(chLUT_RInf.eq.'') then
       print*, 'No LUT for Rinf given <lut1>.'
       bError=.TRUE.
      endif
 
 !    LUT Rinf for absorbing wavelength
-     call GETARG(6, chLUT_RInf02)
+     call GETARG(7, chLUT_RInf02)
      if(chLUT_RInf02.eq.'') then
       print*, 'No LUT for Rinf given <lut2>.'
       bError=.TRUE.
      endif
 
 !    Filename for the non-absorbing channel data (real 4)
-     call GETARG(7, chBand01)
+     call GETARG(8, chBand01)
      if(chBand01.eq.'') then
       print*, 'No input channel given <band1>.'
       bError=.TRUE.
      endif
 
 !    Filename for the absorbing channel data (real 4).
-     call GETARG(8, chBand02)
+     call GETARG(9, chBand02)
      if(chBand02.eq.'') then
       print*, 'No input channel given <band2>.'
       bError=.TRUE.
      endif
 
 !    Filename for the pixel zenith angle data (real 4).
-     call GETARG(9, chSZen)
+     call GETARG(10, chSZen)
      if(chSZen.eq.'') then
       print*, 'No sun zenith angle given <szen>.'
       bError=.TRUE.
      endif
 
 !    Filename for the pixel zenith data (real 4).
-     call GETARG(10, chPZen)
+     call GETARG(11, chPZen)
      if(chPZen.eq.'') then
       print*, 'No pixel zenith angle given <pzen>.'
       bError=.TRUE.
      endif
 
 !    Filename for the relative azimuth angle data (real 4).
-     call GETARG(11, chRelAzm)
+     call GETARG(12, chRelAzm)
      if(chRelAzm.eq.'') then
       print*, 'No relative azimuth angle given <razm>.'
       bError=.TRUE.
      endif
 
 !    Filename for the cloud mask (integer 2).
-     call GETARG(12, chCloudMask)
+     call GETARG(13, chCloudMask)
      if(chCloudMask.eq.'') then
       print*, 'No cloud mask given <cmask>.'
       bError=.TRUE.
      endif
 
 !    Filename for the computation mask (integer 2).band1
-     call GETARG(13, chComputationMask)
+     call GETARG(14, chComputationMask)
      if(chComputationMask.eq.'') then
       print*, 'No computaion mask given <mask>.'
       bError=.TRUE.
      endif
 
 !    Filename for the optical thickness (output).
-     call GETARG(14, chTau)
+     call GETARG(15, chTau)
      if(chTau.eq.'') then
       print*, 'No tau output file given <tau>.'
       bError=.TRUE.
      endif
 
 !    Filename for the effective droplet radius (output)
-     call GETARG(15, chAef)
+     call GETARG(16, chAef)
      if(chAef.eq.'') then
       print*, 'No aef output file given <aef>.'
       bError=.TRUE.
      endif
 
 !    Filename for the liquid water path (output)
-     call GETARG(16, chLWP)
+     call GETARG(17, chLWP)
      if(chLWP.eq.'') then
       print*, 'No lwp output file given <lwp>.'
       bError=.TRUE.
      endif
 
 !    Filename for the ice water path (output)
-     call GETARG(17, chIWP)
+     call GETARG(18, chIWP)
      if(chIWP.eq.'') then
       print*, 'No iwp output file given <iwp>.'
       bError=.TRUE.
      endif
 
 !    Filename for the particle absorption length (output)
-     call GETARG(18, chSSA)
+     call GETARG(19, chSSA)
      if(chSSA.eq.'') then
       print*, 'No ssa output file given <ssa>.'
       bError=.TRUE.
      endif
 
 !    Filename for the particle absorption length (output)
-     call GETARG(19, chPAL)
+     call GETARG(20, chPAL)
      if(chPAL.eq.'') then
       print*, 'No pal output file given <pal>.'
       bError=.TRUE.
      endif
 
 !    Filename for the particle absorption length (output)
-     call GETARG(20, chCloudAlb)
+     call GETARG(21, chCloudAlb)
      if(chCloudAlb.eq.'') then
       print*, 'No cloud albedo output file given <calb>.'
       bError=.TRUE.
      endif
 
 !    Filename for the cloud geometrical thickness (output)
-     call GETARG(21, chCGT)
+     call GETARG(22, chCGT)
      if(chCloudAlb.eq.'') then
       print*, 'No cloud geometrical thickness output file given <calb>.'
       bError=.TRUE.
      endif
 
 !    Filename for the columnar droplet concentration (output)
-     call GETARG(22, chCDC)
+     call GETARG(23, chCDC)
      if(chCloudAlb.eq.'') then
       print*, 'No columnar droplet concentration output file given <calb>.'
       bError=.TRUE.
      endif
 
 !    Filename for the droplet concentration (output)
-     call GETARG(23, chDC)
+     call GETARG(24, chDC)
      if(chCloudAlb.eq.'') then
       print*, 'No droplet concentration output file given <calb>.'
       bError=.TRUE.
      endif
 
 !    Number of columns in the input binary dataset
-     call GETARG(24, chCols)
+     call GETARG(25, chCols)
      if(chCols.eq.'') then 
       print*, 'No coloumns given <cols>.'
       bError=.TRUE.
@@ -870,7 +873,7 @@
      endif
 
 !    Number of rows in the input binary dataset
-     call GETARG(25, chRows)
+     call GETARG(26, chRows)
      if(chRows.eq.'') then
       print*, 'No rows given <rows>.'
       bError=.TRUE.
@@ -879,7 +882,7 @@
      endif
 
 !    Cloud type
-     call GETARG(26, chCloudType)
+     call GETARG(27, chCloudType)
      if(chCloudType.eq.'') then 
       print*, 'No cloud type given <ctype>.'
       bError=.TRUE.
@@ -888,7 +891,7 @@
      endif
 
 !    Use background albedo different from 0.0
-     call GETARG(27, chAlbedo)
+     call GETARG(28, chAlbedo)
      if(chAlbedo.eq.'') then 
       print*, 'No albedo mode selected <alb>.'
       bError=.TRUE.
@@ -900,14 +903,14 @@
 
      if(bAlbedo) then
 !     Filename for the non-absorbing albedo data (real 4)
-      call GETARG(28, chAlbedo01)
+      call GETARG(29, chAlbedo01)
       if(chAlbedo01.eq.'') then
        print*, 'No albedo for band 1 given <alb1>.'
        bError=.TRUE.
       endif
 
 !     Filename for the absorbing channel albedo (real 4).
-      call GETARG(29, chAlbedo02)
+      call GETARG(30, chAlbedo02)
       if(chAlbedo02.eq.'') then
        print*, 'No albedo for band 2 given <alb2>.'
        bError=.TRUE.
@@ -945,22 +948,29 @@
       read(chWavelength02, '(f5.3)') fWavelength02
      endif
 
+!    Path to the LUTs directory used by SLALOM
+     call GETARG(5, chLUTPath)
+     if(chLUTPath.eq.'') then
+      print*, 'No path to LUTs directory given <lutp>.'
+      bError=.TRUE.
+     endif
+
 !    LUT Rinf for non-absorbing wavelength
-     call GETARG(5, chLUT_RInf)
+     call GETARG(6, chLUT_RInf)
      if(chLUT_RInf.eq.'') then
       print*, 'No LUT for Rinf given <lut1>.'
       bError=.TRUE.
      endif
 
 !    LUT Rinf for absorbing wavelength
-     call GETARG(6, chLUT_RInf02)
+     call GETARG(7, chLUT_RInf02)
      if(chLUT_RInf02.eq.'') then
       print*, 'No LUT for Rinf given <lut2>.'
       bError=.TRUE.
      endif
 
 !    Cloud type
-     call GETARG(7, chCloudType)
+     call GETARG(8, chCloudType)
      if(chCloudType.eq.'') then 
       print*, 'No cloud type given <ctype>.'
       bError=.TRUE.
@@ -969,29 +979,30 @@
      endif
 
 !    Filename for the ASCII input file
-     call GETARG(8, chInfile)
+     call GETARG(9, chInfile)
      if(chInfile.eq.'') then
       print*, 'No input file given <indat>.'
       bError=.TRUE.
      endif
 
 !    Filename for the ASCII output file
-     call GETARG(9, chOutfile)
+     call GETARG(10, chOutfile)
      if(chOutfile.eq.'') then
       print*, 'No output file given <outdat>.'
       bError=.TRUE.
      endif
 
 !    Flag for testruns
-     call GETARG(10, chTest)
+     call GETARG(11, chTest)
      if(chTest.eq.'') then 
-      print*, 'No test flag setting given <indat>.'
+      print*, 'No test flag setting given <test>.'
       bError=.TRUE.
      elseif(chTest.eq.'1') then
       bTest = .true.
      else
       bTest = .false.
      endif
+
     endif
 
     if(bError) then
@@ -1005,6 +1016,7 @@
      print*, '<cp>    = ', bWaterCloud
      print*, '<w1>    = ', fWavelength01
      print*, '<w2>    = ', fWavelength02
+     print*, '<lutp>  = ', trim(chLUTPath)
      print*, '<lut1>  = ', trim(chLUT_RInf)
      print*, '<lut2>  = ', trim(chLUT_RInf02)
      if(bBinary) then
@@ -1046,32 +1058,33 @@
 !    For ASCII runs, set liRuns to 10,000 (= 10,000 datasets)
      if(bBinary) then
       liRuns = liCols*liRows
-      liRecl = liCols*liRows
+      liReclByte = liCols*liRows
+      liReclInt = liCols*liRows*2
+      liReclReal = liCols*liRows*4
      else
       liRuns = 30000
-      liRecl = 30000
      endif
 
 !    Allocate arrays
      allocate( &
-     prgiCloud(liRecl), &
-     prgiMask(liRecl), &
-     prgfNonAbs(liRecl), &
-     prgfAbs(liRecl), &
-     prgfNonAbsAlb(liRecl), &
-     prgfAbsAlb(liRecl), &
-     prgfSZen(liRecl), &
-     prgfPZen(liRecl), &
-     prgfRelAzm(liRecl), &
-     prgfTau(liRecl), &
-     prgfAef(liRecl), &
-     prgfLWP(liRecl), &
-     prgfSSA(liRecl), &
-     prgfPAL(liRecl), &
-     prgfCloudAlb(liRecl), &
-     prgfCGT(liRecl), &
-     prgfCDC(liRecl), &
-     prgfDC(liRecl))
+     prgiCloud(liRuns), &
+     prgiMask(liRuns), &
+     prgfNonAbs(liRuns), &
+     prgfAbs(liRuns), &
+     prgfNonAbsAlb(liRuns), &
+     prgfAbsAlb(liRuns), &
+     prgfSZen(liRuns), &
+     prgfPZen(liRuns), &
+     prgfRelAzm(liRuns), &
+     prgfTau(liRuns), &
+     prgfAef(liRuns), &
+     prgfLWP(liRuns), &
+     prgfSSA(liRuns), &
+     prgfPAL(liRuns), &
+     prgfCloudAlb(liRuns), &
+     prgfCGT(liRuns), &
+     prgfCDC(liRuns), &
+     prgfDC(liRuns))
 
 !    Initialize arrays
      if(bBinary) then
@@ -1112,45 +1125,45 @@
       print*, ' '
       print*, 'Reading input satellite datasets...'
 
-      open(501,file=chSZen,access='direct',recl=liRecl)
+      open(501,file=chSZen,access='direct',recl=liReclReal)
       read(501,rec=1) prgfSZen
       close(501)
       prgfSZen = abs(prgfSZen)
 
-      open(501,file=chPZen,access='direct',recl=liRecl)
+      open(501,file=chPZen,access='direct',recl=liReclReal)
       read(501,rec=1) prgfPZen
       close(501)
       prgfPZen = abs(prgfPZen)
 
-      open(501,file=chRelAzm,access='direct',recl=liRecl)
+      open(501,file=chRelAzm,access='direct',recl=liReclReal)
       read(501,rec=1) prgfRelAzm
       close(501)
 
-      open(501,file=chBand01,access='direct',recl=liRecl)
+      open(501,file=chBand01,access='direct',recl=liReclReal)
       read(501,rec=1) prgfNonAbs
       close(501)
       prgfNonAbs = prgfNonAbs / cos( prgfSZen*acos(-1.)/180.)
 
-      open(501,file=chBand02,access='direct',recl=liRecl)
+      open(501,file=chBand02,access='direct',recl=liReclReal)
       read(501,rec=1) prgfAbs
       close(501)
       prgfAbs = prgfAbs / cos(prgfSZen*acos(-1.)/180.)
 
       if(bAlbedo) then
-       open(501,file=chAlbedo01,access='direct',recl=liRecl)
+       open(501,file=chAlbedo01,access='direct',recl=liReclReal)
        read(501,rec=1) prgfNonAbsAlb
        close(501)
 
-       open(501,file=chAlbedo02,access='direct',recl=liRecl)
+       open(501,file=chAlbedo02,access='direct',recl=liReclReal)
        read(501,rec=1) prgfAbsAlb
        close(501)
       endif
 
-      open(501,file=chCloudMask,access='direct',recl=liRecl)
+      open(501,file=chCloudMask,access='direct',recl=liReclInt)
       read(501,rec=1) prgiCloud
       close(501)
 
-      open(501,file=chComputationMask,access='direct',recl=liRecl)
+      open(501,file=chComputationMask,access='direct',recl=liReclInt)
       read(501,rec=1) prgiMask
       close(501)
 
@@ -1190,6 +1203,8 @@
     pochLUT_RInf => chLUT_RInf
     pofgLUT => fgLUT
     porgfLUTRInfSSAGrid => rgfLUTRInfSSAGrid
+    porgfLUTKSSAGrid => rgfLUTKSSAGrid
+    porgfLUTRdInfSSAGrid => rgfLUTRdInfSSAGrid
 
     if(fWavelength01.gt.0.8) then
      podrgC => drgC0859
@@ -1347,8 +1362,7 @@
 !    Only necessary for testing - end
 
 
-!Uncomment the following lines for theoretical error studies
-!Start change
+!    Uncomment for error propagation studies - start
 !!!     do liErrorCounter = 799,1200
 !!!      if(liErrorCounter.eq.799) then
 !!!       fNonAbs = prgfNonAbs(liCounter)
@@ -1359,7 +1373,7 @@
 !!!      endif
 !!!      if(fNonAbs.gt.1.000) fNonAbs = 1.000
 !!!      if(fAbs.gt.1.000) fAbs = 1.000
-!End change
+!    Uncomment for error propagation studies - end
 
 !    Check if actual pixel data is valid; if yes: compute
      if(fNonAbs.ne.0.000.and.iCloud.gt.1.and.prgiMask(liCounter).eq.1) then
@@ -1385,27 +1399,24 @@
       endif
 !     Only necessary for testing - end
 
-!Uncomment the following lines for theoretical error studies
-!Start change
+!     Uncomment for error propagation studies - start
 !!!      if(liErrorCounter.lt.800) then
 !!!       fTauTarget = fTau
 !!!       fAefTarget = fAef
 !!!      else
 !!!       prgfTauError(liCounter) = fTau / fTauTarget * 100.0 - 100.0
 !!!       prgfAefError(liCounter) = fAef / fAefTarget * 100.0 - 100.0
-!!!       print 999, prgfTauIn(liCounter), prgfAefIn(liCounter), float(liErrorCounter)/10.0, fNonAbs, fAbs, prgfTau(liCounter), prgfAef(liCounter), prgfTauError(liCounter), prgfAefError(liCounter)
+!!!       print 999, prgfTauIn(liCounter), prgfAefIn(liCounter), (float(liErrorCounter)/10.0)-100.0, fNonAbs, fAbs, prgfTau(liCounter), prgfAef(liCounter), prgfTauError(liCounter), prgfAefError(liCounter)
 !!!      endif
-!End change
+!     Uncomment for error propagation studies - end
 
      endif
 
-!Uncomment the following lines for theoretical error studies
-!Start change
-!!!      enddo
-!!!      print *, " "
-!!!      print *, " "
-!End change
-
+!    Uncomment for error propagation studies - start
+!!!     enddo
+!!!     print *, " "
+!!!     print *, " "
+!    Uncomment for error propagation studies - end
 
 10  continue
 
@@ -1415,39 +1426,39 @@
 
 !   Write retrieval results to output binary files
     if(bBinary) then
-     open(501,file=chTau,access='direct',recl=liRecl)
+     open(501,file=chTau,access='direct',recl=liReclReal)
      write(501,rec=1) prgfTau
      close(501)
 
-     open(501,file=chAef,access='direct',recl=liRecl)
+     open(501,file=chAef,access='direct',recl=liReclReal)
      write(501,rec=1) prgfAef
      close(501)
 
-     open(501,file=chLWP,access='direct',recl=liRecl)
+     open(501,file=chLWP,access='direct',recl=liReclReal)
      write(501,rec=1) prgfLWP
      close(501)
 
-     open(501,file=chSSA,access='direct',recl=liRecl)
+     open(501,file=chSSA,access='direct',recl=liReclReal)
      write(501,rec=1) prgfSSA
      close(501)
 
-     open(501,file=chPAL,access='direct',recl=liRecl)
+     open(501,file=chPAL,access='direct',recl=liReclReal)
      write(501,rec=1) prgfPAL
      close(501)
 
-     open(501,file=chCloudAlb,access='direct',recl=liRecl)
+     open(501,file=chCloudAlb,access='direct',recl=liReclReal)
      write(501,rec=1) prgfCloudAlb
      close(501)
 
-     open(501,file=chCGT,access='direct',recl=liRecl)
+     open(501,file=chCGT,access='direct',recl=liReclReal)
      write(501,rec=1) prgfCGT
      close(501)
 
-     open(501,file=chCDC,access='direct',recl=liRecl)
+     open(501,file=chCDC,access='direct',recl=liReclReal)
      write(501,rec=1) prgfCDC
      close(501)
 
-     open(501,file=chDC,access='direct',recl=liRecl)
+     open(501,file=chDC,access='direct',recl=liReclReal)
      write(501,rec=1) prgfDC
      close(501)
 
@@ -1537,12 +1548,12 @@
 !*******************************************************************************
 
     if(bWaterCloud) then
-     open(501,file='lut_water_1981.dat')
+     open(501,file=trim(chLUTPath)//'lut_water_1981.dat')
      do iCounter = 1,4
       read(501,*)
      enddo
     else
-     open(501,file='lut_ice_1995.dat')
+     open(501,file=trim(chLUTPath)//'lut_ice_1995.dat')
      do iCounter = 1,5
       read(501,*)
      enddo
@@ -1624,7 +1635,6 @@
     integer(2) :: iCounter  !! Counter
 
     real(8) :: dSumC   !! Sum of C parameters (see SLALOM_Defs)
-    real(8) :: dSumD   !! Sum of D parameters (see SLALOM_Defs)
     real(8) :: zbrent  !! Find root of functionR using Brent's method
 
 !*******************************************************************************
@@ -2114,7 +2124,7 @@
 !!
 !!
 !!  VERSION 
-!!  $Revision: 1.7 $
+!!  $Revision: 1.44 $
 !!
 !!
 !!  PURPOSE 
@@ -2132,7 +2142,7 @@
 !!  ATTENTION
 !!  If used within SLALOM, several code clocks within the main routine
 !!  (program CLOUD) have to be commented out. Look for "SLALOM" to see what to
-!!  do. In addition, "use SLALOM_Defs" has to be replaced by "use SLALOM_Defs".
+!!  do. In addition, "use SLALOM_defs" has to be replaced by "use SLALOM_Defs".
 !!
 !!
 !!  CALLING SEQUENCE 
@@ -2153,7 +2163,7 @@
 !!
 !!
 !!  CVS INFORMATION 
-!!  $Id: slalom.f90,v 1.7 2008/08/26 14:21:51 tnauss Exp $ 
+!!  $Id: cloud.f90,v 1.44 2008/05/28 06:41:28 tnauss Exp $ 
 !!
 !!
 !!  CONTACT 
@@ -2172,26 +2182,16 @@
 !!
 !!
 !!  HISTORY 
-!!  $Log: slalom.f90,v $
-!!  Revision 1.7  2008/08/26 14:21:51  tnauss
+!!  $Log: cloud.f90,v $
+!!  Revision 1.44  2008/05/28 06:41:28  tnauss
 !!  Update
-!!  Include cloud geometrical thickness and droplet concentration retrieval.
-!!
-!!  Revision 1.6  2008/08/26 07:06:35  tnauss
-!!  Update
-!!  Include test function in SLALOM code (i. e. known tau and aef is read from
-!!  the ASCII input file in addition to the measurement data and error between
-!!  tau and aef input and output is computed in addition).
-!!
-!!  Revision 1.5  2008/05/20 10:47:06  tnauss
-!!  Update
-!!  Include ASCII file in- and output.
+!!  Include pointers for LUTKSSAGrid and LUTRdInfSSAGrid.
 !!
 !!  Revision 1.43  2008/05/20 10:35:55  tnauss
 !!  Update
 !!  Delete some variables no longer necessary.
 !!
-!!  Revision 1.43  2008/05/19 15:12:18  tnauss
+!!  Revision 1.42  2008/05/19 15:12:18  tnauss
 !!  Update
 !!  Include documentation and adjust some lines.
 !!
@@ -2308,7 +2308,7 @@
 !!
 !!  Revision 1.15  2006/01/14 16:12:32  tnauss
 !!  Update
-!!  Include print/read(*,*) optinons in cfg file.
+!!  Include print/pause optinons in cfg file.
 !!
 !!  Revision 1.14  2006/01/13 17:05:23  tnauss
 !!  Major update
@@ -2382,7 +2382,7 @@
 !! 
 !! 
 !!  VERSION 
-!!  $Revision: 1.7 $ 
+!!  $Revision: 1.44 $ 
 !! 
 !! 
 !!  PURPOSE 
@@ -2413,7 +2413,7 @@
 !! 
 !###############################################################################
 
-!!!    program CLOUD
+!!!     program CLOUD
 
 !############# UNCOMMENT THE NEXT LINE IF USED WITHIN SLALOM ###################
     subroutine CLOUD
@@ -2424,7 +2424,7 @@
 !
 !*******************************************************************************
 
-    use SLALOM_Defs
+    use SLALOM_defs
 
     implicit none
 
@@ -2436,14 +2436,10 @@
 !
 !*******************************************************************************
 
-!!!950 format(a8,f15.7)    !! Print final results
-!!!960 format(' szen    pzen  relazm  ssa     g       ' &
-!!!           'tau    Refl   Trans  RDiff  TDiff  rs     t       ' &
-!!!           'dRinf  dRDInf fEsc0  fEsc')
-!!!961 format(3f7.2,f11.7,f8.5,f7.2,6f7.4,4f7.4)
-!!!970 format(' szen    pzen  relazm  ssa     g       ' &
-!!!           'tau    Refl   RDiff  rs     Trans  TDiff  t')
-!!!971 format(3f7.2,f11.7,f8.5,f7.2,6f7.4)
+!!! 961 format(3f7.2,f11.7,f8.5,f7.2,6f7.4,4f7.4)
+!!! 970 format(' szen    pzen  relazm  ssa     g       ' &
+!!!            'tau    Refl   RDiff  rs     Trans  TDiff  t')
+!!! 971 format(3f7.2,f11.7,f8.5,f7.2,6f7.4)
 
 !*******************************************************************************
 !
@@ -2451,11 +2447,10 @@
 !
 !*******************************************************************************
 
-!!!    chVersion = '$Revision: 1.7 $'
-!!!    print*, ' '
-!!!    print*, ' '
-!!!    print*, 'Program CLOUD'
-!!!    print*, trim(chVersion)
+!!!     print*, ' '
+!!!     print*, ' '
+!!!     print*, 'Program CLOUD'
+!!!     print*, trim(chVersion)
 
 !*******************************************************************************
 !
@@ -2463,8 +2458,8 @@
 !
 !*******************************************************************************
 
-!!!    chControlFile    = 'cloud.cfg'
-!!!    call CLOUD_ReadSettings
+!!!     chControlFile    = 'cloud.cfg'
+!!!     call CLOUD_ReadSettings
 
 !*******************************************************************************
 !
@@ -2472,10 +2467,12 @@
 !
 !*******************************************************************************
 
-!!!    pochLUT_RInf => chLUT_RInf
-!!!    porgiLUTRInf => rgiLUTRInf
-!!!    pofgLUT => fgLUT
-!!!    porgfLUTRInfSSAGrid => rgfLUTRInfSSAGrid
+!!!     pochLUT_RInf => chLUT_RInf
+!!!     porgiLUTRInf => rgiLUTRInf
+!!!     pofgLUT => fgLUT
+!!!     porgfLUTRInfSSAGrid => rgfLUTRInfSSAGrid
+!!!     porgfLUTKSSAGrid => rgfLUTKSSAGrid
+!!!     porgfLUTRdInfSSAGrid => rgfLUTRdInfSSAGrid
 
 !*******************************************************************************
 !
@@ -2483,48 +2480,50 @@
 !
 !*******************************************************************************
 
-!!!    chControlFile    = 'cloud.cfg'
-!!!    call CLOUD_ReadSettings
+!!!     chControlFile    = 'cloud.cfg'
+!!!     call CLOUD_ReadSettings
 
 !   Set asymmetry parameter used for computation of actual LUT for RInf
-!!!   if(pochLUT_RInf.eq.'lut_RInf_0645_aef_06.dat') then
-!!!     pofgLUT = 0.850018000000000000  ! 06µm, 645.5nm
-!!!     rgchOutFile(1) = 'solar_lut_0645_06.dat'
-!!!    elseif(pochLUT_RInf.eq.'lut_RInf_0645_aef_10.dat') then
-!!!     pofgLUT = 0.861757000000000000  ! 10µm, 645.5nm
-!!!     rgchOutFile(1) = 'solar_lut_0645_10.dat'
-!!!    elseif(pochLUT_RInf.eq.'lut_RInf_0645_aef_16.dat') then
-!!!     pofgLUT = 0.869221000000000000  ! 16µm, 645.5nm
-!!!     rgchOutFile(1) = 'solar_lut_0645_16.dat'
-!!!    elseif(pochLUT_RInf.eq.'lut_RInf_0856_aef_06.dat') then
-!!!     pofgLUT = 0.843722000000000000  ! 06µm, 856.5nm
-!!!     rgchOutFile(1) = 'solar_lut_0856_06.dat'
-!!!    elseif(pochLUT_RInf.eq.'lut_RInf_0856_aef_10.dat') then
-!!!     pofgLUT = 0.857995000000000000  ! 10µm, 856.5nm
-!!!     rgchOutFile(1) = 'solar_lut_0856_10.dat'
-!!!    elseif(pochLUT_RInf.eq.'lut_RInf_0856_aef_16.dat') then
-!!!     pofgLUT = 0.867233000000000000  ! 16µm, 856.5nm
-!!!     rgchOutFile(1) = 'solar_lut_0856_16.dat'
-!!!    elseif(pochLUT_RInf.eq.'lut_RInf_1630_aef_06.dat') then
-!!!     pofgLUT = 0.817538000000000000  ! 06µm, 1630nm
-!!!     rgchOutFile(1) = 'solar_lut_1630_06.dat'
-!!!    elseif(pochLUT_RInf.eq.'lut_RInf_1630_aef_10.dat') then
-!!!     pofgLUT = 0.846061000000000000  ! 10µm, 1630nm
-!!!     rgchOutFile(1) = 'solar_lut_1630_10.dat'
-!!!    elseif(pochLUT_RInf.eq.'lut_RInf_1630_aef_16.dat') then
-!!!     pofgLUT = 0.861364000000000000  ! 16µm, 1630nm
-!!!     rgchOutFile(1) = 'solar_lut_1630_16.dat'
-!!!    else
-!!!     print*, 'No valid LUT for RInf has been selected.'
-!!!     print*, 'The program is going to stop...'
-!!!     stop
-!!!    endif
-
+!!!    if(pochLUT_RInf.eq.'lut_RInf_0645_aef_06.dat') then
+!!!      pofgLUT = 0.850018000000000000  ! 06µm, 645.5nm
+!!!      rgchOutFile(1) = 'solar_lut_0645_06.dat'
+!!!     elseif(pochLUT_RInf.eq.'lut_RInf_0645_aef_10.dat') then
+!!!      pofgLUT = 0.861757000000000000  ! 10µm, 645.5nm
+!!!      rgchOutFile(1) = 'solar_lut_0645_10.dat'
+!!!     elseif(pochLUT_RInf.eq.'lut_RInf_0645_aef_16.dat') then
+!!!      pofgLUT = 0.869221000000000000  ! 16µm, 645.5nm
+!!!      rgchOutFile(1) = 'solar_lut_0645_16.dat'
+!!!     elseif(pochLUT_RInf.eq.'lut_RInf_0856_aef_06.dat') then
+!!!      pofgLUT = 0.843722000000000000  ! 06µm, 856.5nm
+!!!      rgchOutFile(1) = 'solar_lut_0856_06.dat'
+!!!     elseif(pochLUT_RInf.eq.'lut_RInf_0856_aef_10.dat') then
+!!!      pofgLUT = 0.857995000000000000  ! 10µm, 856.5nm
+!!!      rgchOutFile(1) = 'solar_lut_0856_10.dat'
+!!!     elseif(pochLUT_RInf.eq.'lut_RInf_0856_aef_16.dat') then
+!!!      pofgLUT = 0.867233000000000000  ! 16µm, 856.5nm
+!!!      rgchOutFile(1) = 'solar_lut_0856_16.dat'
+!!!     elseif(pochLUT_RInf.eq.'lut_RInf_1630_aef_06.dat') then
+!!!      pofgLUT = 0.817538000000000000  ! 06µm, 1630nm
+!!!      rgchOutFile(1) = 'solar_lut_1630_06.dat'
+!!!     elseif(pochLUT_RInf.eq.'lut_RInf_1630_aef_10.dat') then
+!!!      pofgLUT = 0.846061000000000000  ! 10µm, 1630nm
+!!!      rgchOutFile(1) = 'solar_lut_1630_10.dat'
+!!!     elseif(pochLUT_RInf.eq.'lut_RInf_1630_aef_16.dat') then
+!!!      pofgLUT = 0.861364000000000000  ! 16µm, 1630nm
+!!!      rgchOutFile(1) = 'solar_lut_1630_16.dat'
+!!!     elseif(pochLUT_RInf.eq.'lut_RInf_ice.dat') then
+!!!      pofgLUT = 0.752400000000000000  ! all aef
+!!!      rgchOutFile(1) = 'solar_lut_ice.dat'
+!!!     else
+!!!      print*, 'No valid LUT for RInf has been selected.'
+!!!      print*, 'The program is going to stop...'
+!!!      stop
+!!!     endif
 
 !   Open output filenames    
-!!!    open(550,file=trim(rgchOutFile(1)))
-!!!    write(550,*) 'Version: ',trim(chVersion)
-!!!    write(550,970)
+!!!     open(550,file=trim(rgchOutFile(1)))
+!!!     write(550,*) 'Version: ',trim(chVersion)
+!!!     write(550,970)
 
 !*******************************************************************************
 !
@@ -2532,7 +2531,7 @@
 !
 !*******************************************************************************
 
-!!!    call CLOUD_ReadLUT
+!!!     call CLOUD_ReadLUT
 
 !*******************************************************************************
 !
@@ -2541,21 +2540,21 @@
 !*******************************************************************************
 
 !   Program controll settings
-!!!    liTauMin = nint(fTauMin*100)
-!!!    liTauMax = nint(fTauMax*100)
-!!!    liTauStep = nint(fTauStep*100)
-!!!    liSSAMin = nint(fSSAMin * 1000000)
-!!!    liSSAMax = nint(fSSAMax * 1000000)
-!!!    liSSAStep = nint(fSSAStep * 1000000)
-!!!    liSZenMin = nint(fSZenMin*100)
-!!!    liSZenMax = nint(fSZenMax*100)
-!!!    liSZenStep = nint(fSZenStep*100)
-!!!    liPZenMin = nint(fPZenMin*100)
-!!!    liPZenMax = nint(fPZenMax*100)
-!!!    liPZenStep = nint(fPZenStep*100)
-!!!    liRelAzmMin = nint(fRelAzmMin*100)
-!!!    liRelAzmMax = nint(fRelAzmMax*100)
-!!!    liRelAzmStep = nint(fRelAzmStep*100)
+!!!     liTauMin = nint(fTauMin*100)
+!!!     liTauMax = nint(fTauMax*100)
+!!!     liTauStep = nint(fTauStep*100)
+!!!     liSSAMin = nint(fSSAMin * 1000000)
+!!!     liSSAMax = nint(fSSAMax * 1000000)
+!!!     liSSAStep = nint(fSSAStep * 1000000)
+!!!     liSZenMin = nint(fSZenMin*100)
+!!!     liSZenMax = nint(fSZenMax*100)
+!!!     liSZenStep = nint(fSZenStep*100)
+!!!     liPZenMin = nint(fPZenMin*100)
+!!!     liPZenMax = nint(fPZenMax*100)
+!!!     liPZenStep = nint(fPZenStep*100)
+!!!     liRelAzmMin = nint(fRelAzmMin*100)
+!!!     liRelAzmMax = nint(fRelAzmMax*100)
+!!!     liRelAzmStep = nint(fRelAzmStep*100)
 
 !   Convert ssa grid values of the LUTs to similarity parameter (1-fs is used
 !   for historical reasons since then, the coloumn with the smalest/largest ssa
@@ -2563,24 +2562,24 @@
 !   LUTs have been computed for an asymmetry parameter of 0.8500, this value is
 !   used for the conversion.
 
-!!!    porgfLUTRInfSSAGrid  = 1.0 - sqrt( (1.0-porgfLUTRInfSSAGrid)/ &
-!!!                           (1.0-porgfLUTRInfSSAGrid*pofgLUT) )
-!!!    rgfLUTKSSAGrid     = 1.0 - sqrt( (1.0-rgfLUTKSSAGrid)/ &
-!!!                         (1.0-rgfLUTKSSAGrid*pofgLUT) )
-!!!    rgfLUTRdInfSSAGrid = 1.0 - sqrt( (1.0-rgfLUTRdInfSSAGrid)/ &
-!!!                         (1.0-rgfLUTRdInfSSAGrid*pofgLUT) )
+!!!     porgfLUTRInfSSAGrid  = 1.0 - sqrt( (1.0-porgfLUTRInfSSAGrid)/ &
+!!!                            (1.0-porgfLUTRInfSSAGrid*pofgLUT) )
+!!!     porgfLUTKSSAGrid  = 1.0 - sqrt( (1.0-porgfLUTKSSAGrid)/ &
+!!!                            (1.0-porgfLUTKSSAGrid*pofgLUT) )
+!!!     porgfLUTRdinfSSAGrid  = 1.0 - sqrt( (1.0-porgfLUTRdinfSSAGrid)/ &
+!!!                            (1.0-porgfLUTRdinfSSAGrid*pofgLUT) )
 
-!!!    do 10 liTauCounter = liTauMin, liTauMax, liTauStep
-!!!     do 20 liSZenCounter = liSZenMin, liSZenMax, liSZenStep
-!!!      do 30 liPZenCounter = liPZenMin, liPZenMax, liPZenStep
-!!!       do 40 liRelAzmCounter = liRelAzmMin, liRelAzmMax, liRelAzmStep
-!!!        do 50 liSSACounter = liSSAMin, liSSAMax, liSSAStep
+!!!     do 10 liTauCounter = liTauMin, liTauMax, liTauStep
+!!!      do 20 liSZenCounter = liSZenMin, liSZenMax, liSZenStep
+!!!       do 30 liPZenCounter = liPZenMin, liPZenMax, liPZenStep
+!!!        do 40 liRelAzmCounter = liRelAzmMin, liRelAzmMax, liRelAzmStep
+!!!         do 50 liSSACounter = liSSAMin, liSSAMax, liSSAStep
 
-!!!        fTau = float(liTauCounter)/100.0
-!!!        fSSA = float(liSSACounter)/1000000.0
-!!!        fSZen = float(liSZenCounter)/100.0
-!!!        fPZen = float(liPZenCounter)/100.0 
-!!!        fRelAzm = float(liRelAzmCounter)/100.0
+!!!         fTau = float(liTauCounter)/100.0
+!!!         fSSA = float(liSSACounter)/1000000.0
+!!!         fSZen = float(liSZenCounter)/100.0
+!!!         fPZen = float(liPZenCounter)/100.0 
+!!!         fRelAzm = float(liRelAzmCounter)/100.0
 
 !############# END OF SECTION TO COMMENT IF USED WITHIN SLALOM #################
 
@@ -2728,46 +2727,46 @@
 
 !############# COMMENT THE FOLLOWING SECTION IF USED WITHIN SLALOM #############
 
-!!!     if(.not.bFinite  ) then
-!!!      write(550,971) fSZen, fPZen, fRelAzm, fSSA, fg, &
-!!!                     fTau, fRefl, fRDiff, frs, fTrans, fTdiff, ft
-!!!     else
-!!!      write(550,961) fSZen, fPZen, fRelAzm, fSSA, fg, &
-!!!                     fTau, fRefl, fTrans, fRDiff, fTdiff, frs,ft, &
-!!!                     dRinf, dRDInf, fEscape0, fEscape
-!!!     endif
+!!!      if(.not.bFinite  ) then
+!!!       write(550,971) fSZen, fPZen, fRelAzm, fSSA, fg, &
+!!!                      fTau, fRefl, fRDiff, frs, fTrans, fTdiff, ft
+!!!      else
+!!!       write(550,961) fSZen, fPZen, fRelAzm, fSSA, fg, &
+!!!                      fTau, fRefl, fTrans, fRDiff, fTdiff, frs,ft, &
+!!!                      dRinf, dRDInf, fEscape0, fEscape
+!!!      endif
 
 
-!!!     if(bPrint) then
-!!!         print*,' '
-!!!         print*,'Final results from program CLOUD:'
-!!!         print*,'tau:           ', fTau
-!!!         print*,'rs:            ', frs
-!!!         print*,'t:             ', ft
-!!!         print*,'RDiff:         ', fRDiff
-!!!         print*,'TDiff:         ', fTDiff
-!!!         print*,'ADiff:         ', fADiff
-!!!         print*,'Trans:         ', fTrans
-!!!         print*,'Refl:          ', fRefl
-!!!         print*,'Ssa:           ', fSSA
-!!!         print*,'fg:            ', fg
-!!!         print*,'fSZen:         ', fSZen
-!!!         print*,'fPZen:         ', fPZen
-!!!         print*,'fRelAzm:       ', fRelAzm
-!!!         if(bPause) read(*,*)
-!!!        endif
+!!!      if(bPrint) then
+!!!          print*,' '
+!!!          print*,'Final results from program CLOUD:'
+!!!          print*,'tau:           ', fTau
+!!!          print*,'rs:            ', frs
+!!!          print*,'t:             ', ft
+!!!          print*,'RDiff:         ', fRDiff
+!!!          print*,'TDiff:         ', fTDiff
+!!!          print*,'ADiff:         ', fADiff
+!!!          print*,'Trans:         ', fTrans
+!!!          print*,'Refl:          ', fRefl
+!!!          print*,'Ssa:           ', fSSA
+!!!          print*,'fg:            ', fg
+!!!          print*,'fSZen:         ', fSZen
+!!!          print*,'fPZen:         ', fPZen
+!!!          print*,'fRelAzm:       ', fRelAzm
+!!!          if(bPause) read(*,*)
+!!!         endif
 
-!!!50      continue
-!!!40     continue
-!!!30    continue
-!!!20   continue
-!!!10  continue
+!!! 50      continue
+!!! 40     continue
+!!! 30    continue
+!!! 20   continue
+!!! 10  continue
 
-!!!    close(550)
-!!!    close(551)
+!!!     close(550)
+!!!     close(551)
 
-!!!    stop
-!!!    end program CLOUD
+!!!     stop
+!!!     end program CLOUD
 
 !############# END OF SECTION TO COMMENT IF USED WITHIN SLALOM #################
 !############# UNCOMMENT THE NEXT TWO LINES IF USED WITHIN SLALOM ##############
@@ -2781,7 +2780,7 @@
 !! 
 !! 
 !!  VERSION 
-!!  $Revision: 1.7 $ 
+!!  $Revision: 1.44 $ 
 !! 
 !! 
 !!  PURPOSE 
@@ -2816,7 +2815,7 @@
 ! 
 !******************************************************************************* 
 
-    use SLALOM_Defs
+    use SLALOM_defs
     implicit none
 
 !*******************************************************************************
@@ -2827,6 +2826,7 @@
 
     namelist /CLOUDControl/ &
     bFinite  ,     &
+    chLUTPath,     &
     chLUT_RInf,    &
     fg,            &
     fTauMin,       &
@@ -2869,7 +2869,7 @@
 !! 
 !! 
 !!  VERSION 
-!!  $Revision: 1.7 $ 
+!!  $Revision: 1.44 $ 
 !! 
 !! 
 !!  PURPOSE 
@@ -2912,7 +2912,7 @@
 ! 
 !*******************************************************************************
  
-    use SLALOM_Defs
+    use SLALOM_defs
     implicit none
     
     integer(2) iCounter       !! Counter for lut_K.dat
@@ -2927,7 +2927,6 @@
 !*******************************************************************************
  
 950 format(f17.8,8f17.8)  !! Read lut_K.dat content
-951 format(9f10.6)        !! Print lut_K.dat content
 952 format(33i5)          !! Read lut_RInf content
 953 format(10f22.14)      !! Read lut_RdInf.dat content
 
@@ -2939,7 +2938,7 @@
 
 !   Read LUT ktable 
     iCounter = 0 
-    open(501,file='lut_k.dat') 
+    open(501,file=trim(chLUTPath)//'lut_k.dat') 
     read(501,*)
     do iCounter = 1, 30
      read(501,950) rgfLUTKMu0Grid(iCounter), rgfLUTKSSA(iCounter,1:8) 
@@ -2954,7 +2953,7 @@
 !*******************************************************************************
 
 !   Read LUT values in array
-    open(501,file=trim(pochLUT_RInf))
+    open(501,file=trim(chLUTPath)//trim(pochLUT_RInf))
     read(501,*)
      do iCounterSZen = 0, 89
       do iCounterRelAzm = 0, 180
@@ -2974,7 +2973,7 @@
 
 !   Read LUT ktable 
     iCounter = 0 
-    open(501,file='lut_RdInf.dat') 
+    open(501,file=trim(chLUTPath)//'lut_RdInf.dat') 
     read(501,*)
     do iCounter = 1,100
      read(501,953) rgfLUTRdInfMu0Grid(iCounter), rgfLUTRdInfSSA(iCounter,1:9) 
@@ -2992,7 +2991,7 @@
 !! 
 !! 
 !!  VERSION 
-!!  $Revision: 1.7 $ 
+!!  $Revision: 1.44 $ 
 !! 
 !! 
 !!  PURPOSE 
@@ -3033,7 +3032,7 @@
 ! 
 !*******************************************************************************
  
-    use SLALOM_Defs
+    use SLALOM_defs
     implicit none
  
     integer(2) :: iSmalerPosSZen   !! Position of smaller szen value in array
@@ -3226,7 +3225,7 @@
 !! 
 !! 
 !!  VERSION 
-!!  $Revision: 1.7 $ 
+!!  $Revision: 1.44 $ 
 !! 
 !! 
 !!  PURPOSE 
@@ -3262,7 +3261,7 @@
 ! 
 !*******************************************************************************
  
-    use SLALOM_Defs
+    use SLALOM_defs
     implicit none
     real(4),dimension(1) :: rgfMinDiffMu0(100)  !! Parameter for 2D interp.
     real(4),dimension(1) :: rgfMinDiffSSA(9)    !! Parameter for 2D interp.
@@ -3307,13 +3306,13 @@
 
 !   Single-scattering albedo
 !   Find LUT-grid ssa value closest to ssa
-    rgfMinDiffSSA = abs(rgfLUTRdInfSSAGrid - fSSALook) 
+    rgfMinDiffSSA = abs(porgfLUTRdinfSSAGrid - fSSALook) 
     rgfMinLoc = MinLoc(rgfMinDiffSSA) 
     iMinPosSSA = rgfMinLoc(1) 
-    if(rgfLUTRdInfSSAGrid(iMinPosSSA).eq.fSSALook) then
+    if(porgfLUTRdinfSSAGrid(iMinPosSSA).eq.fSSALook) then
      iSmalerPosSSA = iMinPosSSA
      iLargerPosSSA = iMinPosSSA
-    elseif(rgfLUTRdInfSSAGrid(iMinPosSSA).gt.fSSALook) then
+    elseif(porgfLUTRdinfSSAGrid(iMinPosSSA).gt.fSSALook) then
      iSmalerPosSSA = iMinPosSSA-1
      iLargerPosSSA = iMinPosSSA
     else
@@ -3325,8 +3324,8 @@
     if(iLargerPosSSA.gt.9) iLargerPosSSA = 9
 
 !   Set nearest smaler/larger grid value of ssa
-    fSmalerSSA = rgfLUTRdInfSSAGrid(iSmalerPosSSA) 
-    fLargerSSA = rgfLUTRdInfSSAGrid(iLargerPosSSA) 
+    fSmalerSSA = porgfLUTRdinfSSAGrid(iSmalerPosSSA) 
+    fLargerSSA = porgfLUTRdinfSSAGrid(iLargerPosSSA) 
 
 !   Compute relative distance between closest LUT-grid values and
 !   the actual ssa value   
@@ -3377,7 +3376,7 @@
 !! 
 !! 
 !!  VERSION 
-!!  $Revision: 1.7 $ 
+!!  $Revision: 1.44 $ 
 !! 
 !! 
 !!  PURPOSE 
@@ -3414,21 +3413,13 @@
 ! 
 !*******************************************************************************
  
-    use SLALOM_Defs
+    use SLALOM_defs
     implicit none
     real(4),dimension(1) :: rgfMinDiffMu0(30)   !! Parameter for 2D interp.
     real(4),dimension(1) :: rgfMinDiffMu(30)    !! Parameter for 2D interp.
     real(4),dimension(1) :: rgfMinDiffSSA(8)    !! Parameter for 2D interp.
     real(4),dimension(1) :: rgfMinLoc(1)        !! Parameter for 2D interp.
 
-!*******************************************************************************
-! 
-!   Format
-! 
-!*******************************************************************************
-
-950 format(a16,f15.7)    !! Print settings and results from 2D interpolation
- 
 !*******************************************************************************
 ! 
 !   Interpolate value for K with respect to mu0, ssa
@@ -3469,13 +3460,13 @@
 
 !   Single-scattering albedo
 !   Find LUT-grid ssa value closest to ssa with ssa(grid) <= ssa
-    rgfMinDiffSSA = abs(rgfLUTKSSAGrid - fSSALook) 
+    rgfMinDiffSSA = abs(porgfLUTKSSAGrid - fSSALook) 
     rgfMinLoc = MinLoc(rgfMinDiffSSA) 
     iMinPosSSA = rgfMinLoc(1) 
-    if(rgfLUTKSSAGrid(iMinPosSSA).eq.fSSALook) then
+    if(porgfLUTKSSAGrid(iMinPosSSA).eq.fSSALook) then
      iSmalerPosSSA = iMinPosSSA
      iLargerPosSSA = iMinPosSSA
-    elseif(rgfLUTKSSAGrid(iMinPosSSA).gt.fSSALook) then
+    elseif(porgfLUTKSSAGrid(iMinPosSSA).gt.fSSALook) then
      iSmalerPosSSA = iMinPosSSA-1
      iLargerPosSSA = iMinPosSSA
     else
@@ -3487,8 +3478,8 @@
     if(iLargerPosSSA.gt.8) iLargerPosSSA = 8
 
 !   Set nearest smaler/larger grid value of ssa
-    fSmalerSSA = rgfLUTKSSAGrid(iSmalerPosSSA) 
-    fLargerSSA = rgfLUTKSSAGrid(iLargerPosSSA) 
+    fSmalerSSA = porgfLUTKSSAGrid(iSmalerPosSSA) 
+    fLargerSSA = porgfLUTKSSAGrid(iLargerPosSSA) 
 
 !   Compute relative distance between closest LUT-grid values and
 !   the actual ssa value   
@@ -3590,7 +3581,7 @@
 !! 
 !! 
 !!  VERSION 
-!!  $Revision: 1.7 $ 
+!!  $Revision: 1.44 $ 
 !! 
 !! 
 !!  PURPOSE 
@@ -3627,7 +3618,7 @@
 !! 
 !! 
 !!  VERSION 
-!!  $Revision: 1.7 $ 
+!!  $Revision: 1.44 $ 
 !! 
 !! 
 !!  PURPOSE 
@@ -3697,7 +3688,7 @@
 !! 
 !! 
 !!  VERSION
-!!  $Revision: 1.7 $
+!!  $Revision: 1.44 $
 !!
 !!
 !!  PURPOSE
@@ -3780,5 +3771,4 @@
  
     return
     end subroutine CLOUD_3DInterpolation
-
 
