@@ -251,10 +251,12 @@
     integer(2) :: iError !! Flag for input/output error
     integer(2) :: iCloud !! Cloud mask flag
     integer(2) :: iCloudType !! Cloud type (Cu/Sc, As/Ac, Ci/Cs/Cc, Ns, Cb,St)
+    integer(2) :: iStat  !! IO stat return value
 
     integer(2),allocatable :: prgiCloud(:) !! Cloud mask (>=1: cloud)
     integer(2),allocatable :: prgiMask(:)  !! Computation mask (1=compute)
 
+    integer(4) :: iConversion !! Temporal variable to convert integer to logical
     integer(4) :: liCols !! Number of columns in binary input files
     integer(4) :: liRows !! Number of rows in binary input files
     integer(4) :: liRuns !! Number of input value sets
@@ -476,7 +478,7 @@
 
 !Uncomment the following lines for theoretical error studies
 !Start change
-    character(8) :: STIME
+!!!    character(8) :: STIME
 !!!    real(4) :: fTauTarget, fAefTarget
 !End change
 
@@ -685,20 +687,26 @@
 !   Read command line parameters
 !   Binary input (binary = 1, ASCII = 0)
     call GETARG(1, chBinary)
-    read(chBinary, '(i1)') bBinary
     if(chBinary.eq.'') then 
      print*, 'No input mode selected <bi>.'
      bError=.TRUE.
+    elseif(chBinary.eq.'1') then
+     bBinary = .true.
+    else
+     bBinary = .false.
     endif
 
 !   Binary input
     if(bBinary) then
 !    Cloud phase (water = 1, ice = 0)
      call GETARG(2, chWaterCloud)
-     read(chWaterCloud, '(i1)') bWaterCloud
-     if(chWaterCloud.eq.'') then
+     if(chWaterCloud.eq.'') then 
       print*, 'No cloud phase given <cp>.'
       bError=.TRUE.
+     elseif(chWaterCloud.eq.'1') then
+      bWaterCloud = .true.
+     else
+      bWaterCloud = .false.
      endif
 
 !    Non-absorbing wavelength
@@ -881,10 +889,13 @@
 
 !    Use background albedo different from 0.0
      call GETARG(27, chAlbedo)
-     read(chAlbedo, '(i1)') bAlbedo
-     if(chAlbedo.eq.'') then
+     if(chAlbedo.eq.'') then 
       print*, 'No albedo mode selected <alb>.'
       bError=.TRUE.
+     elseif(chAlbedo.eq.'1') then
+      bAlbedo = .true.
+     else
+      bAlbedo = .false.
      endif
 
      if(bAlbedo) then
@@ -907,10 +918,13 @@
     elseif(.not.bBinary) then
 !    Cloud phase (water = 1, ice = 0)
      call GETARG(2, chWaterCloud)
-     read(chWaterCloud, '(i1)') bWaterCloud
-     if(chWaterCloud.eq.'') then
+     if(chWaterCloud.eq.'') then 
       print*, 'No cloud phase given <cp>.'
       bError=.TRUE.
+     elseif(chWaterCloud.eq.'1') then
+      bWaterCloud = .true.
+     else
+      bWaterCloud = .false.
      endif
 
 !    Non-absorbing wavelength
@@ -970,10 +984,13 @@
 
 !    Flag for testruns
      call GETARG(10, chTest)
-     read(chTest, '(i1)') bTest
-     if(chTest.eq.'') then
+     if(chTest.eq.'') then 
       print*, 'No test flag setting given <indat>.'
       bError=.TRUE.
+     elseif(chTest.eq.'1') then
+      bTest = .true.
+     else
+      bTest = .false.
      endif
     endif
 
@@ -1112,12 +1129,12 @@
       open(501,file=chBand01,access='direct',recl=liRecl)
       read(501,rec=1) prgfNonAbs
       close(501)
-      prgfNonAbs = prgfNonAbs / cosd(prgfSZen)
+      prgfNonAbs = prgfNonAbs / cos( prgfSZen*acos(-1.)/180.)
 
       open(501,file=chBand02,access='direct',recl=liRecl)
       read(501,rec=1) prgfAbs
       close(501)
-      prgfAbs = prgfAbs / cosd(prgfSZen)
+      prgfAbs = prgfAbs / cos(prgfSZen*acos(-1.)/180.)
 
       if(bAlbedo) then
        open(501,file=chAlbedo01,access='direct',recl=liRecl)
@@ -1144,14 +1161,16 @@
       open(501,file=chInfile)
       read(501,*)
       liRuns = 0
-      do while (.not.EOF(501))
+!!      do while (.not.EOF(501))
+      do while (.not.IS_IOSTAT_END(iStat))
+       print *, liRuns
        liRuns = liRuns + 1
 !      Only necessary for testing - start
        if(bTest) then
-        read(501,*) prgfSZen(liRuns), prgfPZen(liRuns), prgfRelAzm(liRuns), prgfNonAbs(liRuns), prgfAbs(liRuns), prgfTauIn(liRuns), prgfAefIn(liRuns)
+        read(501,*,IOSTAT=iStat) prgfSZen(liRuns), prgfPZen(liRuns), prgfRelAzm(liRuns), prgfNonAbs(liRuns), prgfAbs(liRuns), prgfTauIn(liRuns), prgfAefIn(liRuns)
 !      Only necessary for testing - end
        else
-        read(501,*) prgfSZen(liRuns), prgfPZen(liRuns), prgfRelAzm(liRuns), prgfNonAbs(liRuns), prgfAbs(liRuns)
+        read(501,*,IOSTAT=iStat) prgfSZen(liRuns), prgfPZen(liRuns), prgfRelAzm(liRuns), prgfNonAbs(liRuns), prgfAbs(liRuns)
        endif
       enddo
       close(501)
@@ -1304,8 +1323,8 @@
     write(501,*) trim(chVersion), ' (CLOUD: 1.43)'
 
 !   Compute pixel by pixel
-    CALL TIME (STIME)
-    print*, STIME
+!!    CALL TIME (STIME)
+!!    print*, STIME
 
     do 10 liCounter = 1, liRuns
      if(mod(liCounter,25000).eq.0) print*, 'Calculating', liCounter, &
@@ -1391,8 +1410,8 @@
 10  continue
 
     close(501)
-    CALL TIME (STIME)
-    print*, STIME
+!!    CALL TIME (STIME)
+!!    print*, STIME
 
 !   Write retrieval results to output binary files
     if(bBinary) then
@@ -1695,7 +1714,7 @@
 !!!    print*, 't_non_abs used within brent:  ', ft1
 !!!    print*, 'last value of ssa in brent:   ', fSSA
 !!!    print*, 'fg used to compute final tau: ', fg
-!!!    pause
+!!!    read(*,*)
 !!!    return
 
 !   Computation of ice clouds with iterration usin SSA
@@ -1790,7 +1809,7 @@
 !!!    print*, 't_non_abs used within brent:  ', ft1
 !!!    print*, 'last value of ssa in brent:   ', fSSA
 !!!    print*, 'fg used to compute final tau: ', fg
-!!!    pause
+!!!    read(*,*)
 !!!    return
     endif
     end subroutine SLALOM_Retrieve
@@ -2013,7 +2032,7 @@
     fb=func(b)
     if((fa.gt.0..and.fb.gt.0.).or.(fa.lt.0..and.fb.lt.0.))then
 !     print*, 'root must be bracketed for zbrent'
-!     pause
+!     read(*,*)
     endif
     c=b
     fc=fb
@@ -2071,7 +2090,8 @@
      endif
      fb=func(b)
 11  continue
-    pause 'zbrent exceeding maximum iterations'
+    write(*,*) 'zbrent exceeding maximum iterations'
+    read(*,*)
     zbrent=b
     return
 !   (C) Copr. 1986-92 Numerical Recipes Software ,#23.
@@ -2288,7 +2308,7 @@
 !!
 !!  Revision 1.15  2006/01/14 16:12:32  tnauss
 !!  Update
-!!  Include print/pause optinons in cfg file.
+!!  Include print/read(*,*) optinons in cfg file.
 !!
 !!  Revision 1.14  2006/01/13 17:05:23  tnauss
 !!  Major update
@@ -2734,7 +2754,7 @@
 !!!         print*,'fSZen:         ', fSZen
 !!!         print*,'fPZen:         ', fPZen
 !!!         print*,'fRelAzm:       ', fRelAzm
-!!!         if(bPause) pause
+!!!         if(bPause) read(*,*)
 !!!        endif
 
 !!!50      continue
@@ -3192,7 +3212,7 @@
      print*,'Smaler Rinf:   ', dSmalerRInf
      print*,'LargerRinf:    ', dLargerRInf
      print*,'Rinf:          ', dRinf
-     if(bPause) pause
+     if(bPause) read(*,*)
     endif
     
     return
@@ -3343,7 +3363,7 @@
      print*,'dx10:          ', dx10
      print*,'dx11:          ', dx11
      print*,'RDinf:         ', dRDInf
-     if(bPause) pause
+     if(bPause) read(*,*)
     endif
 
     return
@@ -3556,7 +3576,7 @@
      print*,'Relative Mu:   ', dRelativeMu
      print*,'Escape0:       ', fEscape0
      print*,'Escape:        ', fEscape
-     if(bPause) pause
+     if(bPause) read(*,*)
     endif
 
     return
