@@ -208,17 +208,17 @@
     real(4) :: ft1In
 !   Only necessary for testing - end
 
-    logical(4) :: bError       !! Error indicator
-    logical(4) :: bBinary      !! Use binary (1) or ASCII (0) input
-    logical(4) :: bWaterCloud  !! Retrieval for water (1) or ice (0) clouds
-    logical(4) :: bAlbedo      !! Use background albedo different from 0.0
-    logical(4) :: bTest        !! Testrun (known tau and aef are read)
+    logical(4) :: bError      !! Error indicator
+    logical(4) :: bBinary     !! Use binary (1) or ASCII (0) input
+    logical(4) :: bWaterCloud !! Retrieval for water (1) or ice (0) clouds
+    logical(4) :: bAlbedo     !! Use background albedo different from 0.0
+    logical(4) :: bTest       !! Testrun (known tau and aef are read)
 
-    character(1) :: chBinary       !! Command line argument for bBinary
-    character(1) :: chWaterCloud   !! Command line argument for bWaterCloud
-    character(1) :: chAlbedo       !! Command line argument for bAlbedo
-    character(1) :: chCloudType    !! Command line argument for iCloudType
-    character(1) :: chTest         !! Command line argument for bTest
+    character(1) :: chBinary     !! Command line argument for bBinary
+    character(1) :: chWaterCloud !! Command line argument for bWaterCloud
+    character(1) :: chAlbedo     !! Command line argument for bAlbedo
+    character(1) :: chCloudType  !! Command line argument for iCloudType
+    character(1) :: chTest       !! Command line argument for bTest
 
     character(5) :: chWavelength01 !! Command line argument for iWavelength01
     character(5) :: chWavelength02 !! Command line argument for iWavelength02
@@ -238,9 +238,9 @@
     character(300) :: chLWP   !! Name of liquid water path dataset
     character(300) :: chIWP   !! Name of ice water path dataset
     character(300) :: chCloudAlb !! Name of cloud albedo dataset
-    character(300) :: chCGT      !! Name of cloud geometrical thickness dataset
-    character(300) :: chCDC      !! Name of columnar droplet concentration dataset
-    character(300) :: chDC       !! Name of droplet concentration dataset
+    character(300) :: chCGT   !! Name of cloud geometrical thickness dataset
+    character(300) :: chCDC   !! Name of columnar droplet concentration dataset
+    character(300) :: chDC    !! Name of droplet concentration dataset
     character(300) :: chSSA   !! Name of single scattering albedo dataset
     character(300) :: chPAL   !! Name of particle absorption length dataset
     character(300) :: chAlbedo01 !! Name of non-absorbing albedo dataset
@@ -299,23 +299,23 @@
     real(4),allocatable :: prgfAbs(:)    !! Input abs. band reflectance
     real(4),allocatable :: prgfNonAbsAlb(:) !! Input non-abs. background albedo
     real(4),allocatable :: prgfAbsAlb(:) !! Input abs. background albedo
-    real(4),allocatable :: prgfSZen(:)   !! Input solar zenith angle
-    real(4),allocatable :: prgfPZen(:)   !! Input pixel zenith angle
+    real(4),allocatable :: prgfSZen(:) !! Input solar zenith angle
+    real(4),allocatable :: prgfPZen(:) !! Input pixel zenith angle
     real(4),allocatable :: prgfRelAzm(:) !! Input relative azimuth angle
-    real(4),allocatable :: prgfTau(:)    !! Output optical thickness
-    real(4),allocatable :: prgfAef(:)    !! Output cloud droplet radius
-    real(4),allocatable :: prgfLWP(:)    !! Output liquid water path
-    real(4),allocatable :: prgfSSA(:)    !! Output single scattering albedo
-    real(4),allocatable :: prgfPAL(:)    !! Output particle absorption length
+    real(4),allocatable :: prgfTau(:)  !! Output optical thickness
+    real(4),allocatable :: prgfAef(:)  !! Output cloud droplet radius
+    real(4),allocatable :: prgfLWP(:)  !! Output liquid water path
+    real(4),allocatable :: prgfSSA(:)  !! Output single scattering albedo
+    real(4),allocatable :: prgfPAL(:)  !! Output particle absorption length
     real(4),allocatable :: prgfCloudAlb(:) !! Output cloud albedo
-    real(4),allocatable :: prgfCGT(:)    !! Output cloud geometrical thickness
-    real(4),allocatable :: prgfCDC(:)    !! Output columnar droplet concentration
-    real(4),allocatable :: prgfDC(:)     !! Output droplet concentration
+    real(4),allocatable :: prgfCGT(:)  !! Output cloud geometrical thickness
+    real(4),allocatable :: prgfCDC(:)  !! Output columnar droplet concentration
+    real(4),allocatable :: prgfDC(:)   !! Output droplet concentration
     real(4),dimension(1) :: rgfAefInput(2748620)
 
     real(8) :: drgC1630(5)  !! Parameters for wavelength 1.6300µm
     real(8) :: drgD(5)      !! Parameter
-    real(8) :: drgCWC(6)    !! Cloud water content (Cu/Sc, As/Ac, Ci/Cs/Cc, Ns, Cb,St)
+    real(8) :: drgCWC(6) !! Cloud water content (Cu/Sc,As/Ac,Ci/Cs/Cc,Ns,Cb,St)
     real(8) :: dSSARetrieve !! Retrieved value of SSA
 
 !   Some pointers and targets
@@ -338,11 +338,11 @@
 !    real(4),dimension(1) :: rgfLUTgAbs(28)   !! LUT for g for abs. channel
 !   Modified for next version 2008-07-16
 
-!***************************************************************************************** 
+!*******************************************************************************
 ! 
 !   Declaration of variables and data blocks from program CLOUD
 ! 
-!***************************************************************************************** 
+!*******************************************************************************
 
     logical(4) :: bPrint        !! Print intermediate results
     logical(4) :: bPause        !! Hold after printing intermediate results
@@ -511,18 +511,18 @@
     data drgCWC/0.3,0.25,0.014,0.3,0.3928,0.35/
 
 !   Modified for next version 2008-07-16
-!    data rgfLUTgNonAbs/0.8093E+00,0.8285E+00,0.8383E+00,0.8445E+00,0.8491E+00, &
-!                       0.8527E+00,0.8556E+00,0.8581E+00,0.8602E+00,0.8620E+00, &
-!                       0.8636E+00,0.8649E+00,0.8662E+00,0.8672E+00,0.8682E+00, &
-!                       0.8691E+00,0.8699E+00,0.8706E+00,0.8713E+00,0.8719E+00, &
-!                       0.8724E+00,0.8730E+00,0.8734E+00,0.8739E+00,0.8743E+00, &
-!                       0.8747E+00,0.8751E+00,0.8754E+00/
-!    data rgfLUTgAbs/0.7868E+00,0.7861E+00,0.8026E+00,0.8176E+00,0.8285E+00, &
-!                       0.8362E+00,0.8419E+00,0.8463E+00,0.8498E+00,0.8528E+00, &
-!                       0.8554E+00,0.8576E+00,0.8596E+00,0.8614E+00,0.8631E+00, &
-!                       0.8646E+00,0.8659E+00,0.8672E+00,0.8683E+00,0.8694E+00, &
-!                       0.8704E+00,0.8713E+00,0.8722E+00,0.8730E+00,0.8737E+00, &
-!                       0.8745E+00,0.8752E+00,0.8758E+00/
+!   data rgfLUTgNonAbs/0.8093E+00,0.8285E+00,0.8383E+00,0.8445E+00,0.8491E+00,&
+!                      0.8527E+00,0.8556E+00,0.8581E+00,0.8602E+00,0.8620E+00,&
+!                      0.8636E+00,0.8649E+00,0.8662E+00,0.8672E+00,0.8682E+00,&
+!                      0.8691E+00,0.8699E+00,0.8706E+00,0.8713E+00,0.8719E+00,&
+!                      0.8724E+00,0.8730E+00,0.8734E+00,0.8739E+00,0.8743E+00,&
+!                      0.8747E+00,0.8751E+00,0.8754E+00/
+!   data rgfLUTgAbs/0.7868E+00,0.7861E+00,0.8026E+00,0.8176E+00,0.8285E+00, &
+!                      0.8362E+00,0.8419E+00,0.8463E+00,0.8498E+00,0.8528E+00,&
+!                      0.8554E+00,0.8576E+00,0.8596E+00,0.8614E+00,0.8631E+00,&
+!                      0.8646E+00,0.8659E+00,0.8672E+00,0.8683E+00,0.8694E+00,&
+!                      0.8704E+00,0.8713E+00,0.8722E+00,0.8730E+00,0.8737E+00,&
+!                      0.8745E+00,0.8752E+00,0.8758E+00/
 !   Modified for next version 2008-07-16
 
     end module SLALOM_defs
@@ -1332,11 +1332,6 @@
 ! 
 !*******************************************************************************
 
-!   Open log file
-    open(501,file='SLALOM_output.dat')
-    write(501,960)
-    write(501,*) trim(chVersion), ' (CLOUD: 1.43)'
-
 !   Compute pixel by pixel
 !!    CALL TIME (STIME)
 !!    print*, STIME
@@ -1420,7 +1415,6 @@
 
 10  continue
 
-    close(501)
 !!    CALL TIME (STIME)
 !!    print*, STIME
 
