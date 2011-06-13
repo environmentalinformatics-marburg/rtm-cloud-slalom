@@ -335,6 +335,10 @@
     integer(4) :: liRelAzmMax    !! Same as fRelAzmMax*100 (for do routines)
     integer(4) :: liRelAzmStep   !! Same as fRelAzmStep*100 (for do routines)
     integer(4) :: liRelAzmCounter !! Counter for relative azimuth angles
+    integer(4) :: liAlbedoMin    !! Same as fAlbedoMin*1000 (for do routines)
+    integer(4) :: liAlbedoMax    !! Same as fAlbedoMax*1000 (for do routines)
+    integer(4) :: liAlbedoStep   !! Same as fAlbedoStep*1000 (for do routines)
+    integer(4) :: liAlbedoCounter !! Counter for background albedo
 
     real(4) :: fMu0          !! Actual value of cos(sun_zenith)=mu0
     real(4) :: fMu           !! Actual value of cos(pixel_zenith)=mu
@@ -372,6 +376,9 @@
     real(4) :: fTauMin       !! Minimum tau for computation
     real(4) :: fTauMax       !! Maximum tau for computation
     real(4) :: fTauStep      !! Computation step for tau
+    real(4) :: fAlbedoMin    !! Minimum aef for computation
+    real(4) :: fAlbedoMax    !! Minimum aef for computation
+    real(4) :: fAlbedoStep   !! Minimum aef for computation
     real(4) :: fSSAMin       !! Minimum SSA for computation
     real(4) :: fSSAMax       !! Maximum SSA for computation
     real(4) :: fSSAStep      !! Computation step for SSA
@@ -379,6 +386,7 @@
     real(4) :: frsinf        !! Spherical albedo of a semi-infinite layer
     real(4) :: fTrans        !! Transmission
     real(4) :: fTau          !! Cloud optical thickness
+    real(4) :: fAlbedo       !! Background albedo
     real(4) :: fg            !! Asymmetry parameter
     real(4) :: fs            !! Similarity parameter
     real(4) :: fk            !! Parameter (see publication)
@@ -502,10 +510,13 @@
 !
 !*******************************************************************************
 
-961 format(3f7.2,f11.7,f8.5,f7.2,6f7.4,4f7.4)
-970 format(' szen    pzen  relazm  ssa     g       ' &
-           'tau    Refl   RDiff  rs     Trans  TDiff  t')
-971 format(3f7.2,f11.7,f8.5,f7.2,6f7.4)
+! Output format for finit cloud computations
+960 format(3a8,a11,a8,a8,a7,6a7,4a9)
+961 format(3f8.2,f11.7,f8.5,f8.3,f7.2,6f7.4,4f9.4)
+
+! Output format for infinit cloud computations
+970 format(3a8,a11,a8,a8,a7,6a7)
+971 format(3f8.2,f11.7,f8.5,f8.3,f7.2,6f7.4)
 
 !*******************************************************************************
 !
@@ -513,6 +524,7 @@
 !
 !*******************************************************************************
 
+    chVersion = "2011-06-13"
     print*, ' '
     print*, ' '
     print*, 'Program CLOUD'
@@ -545,9 +557,6 @@
 !   Define parameters
 !
 !*******************************************************************************
-
-    chControlFile    = 'cloud.cfg'
-    call CLOUD_ReadSettings
 
 !   Set asymmetry parameter used for computation of actual LUT for RInf
    if(pochLUT_RInf.eq.'lut_RInf_0645_aef_06.dat') then
@@ -589,7 +598,18 @@
 !   Open output filenames    
     open(550,file=trim(rgchOutFile(1)))
     write(550,*) 'Version: ',trim(chVersion)
-    write(550,970)
+
+    if(.not.bFinite  ) then
+     write(550,970) 'fSZen','fPZen','fRelAzm','fSSA','fg', &
+                     'fAlbedo','fTau','fRefl','fTrans','fRDiff','fTdiff', &
+                     'frs','ft'
+
+    else
+     write(550,960) 'fSZen','fPZen','fRelAzm','fSSA','fg', &
+                    'fAlbedo','fTau','fRefl','fTrans','fRDiff','fTdiff', &
+                    'frs','ft', &
+                    'dRinf','dRDInf','fEscape0','fEscape'
+    endif
 
 !*******************************************************************************
 !
@@ -621,6 +641,9 @@
     liRelAzmMin = nint(fRelAzmMin*100)
     liRelAzmMax = nint(fRelAzmMax*100)
     liRelAzmStep = nint(fRelAzmStep*100)
+    liAlbedoMin = nint(fAlbedoMin*1000)
+    liAlbedoMax = nint(fAlbedoMax*1000)
+    liAlbedoStep = nint(fAlbedoStep*1000)
 
 !   Convert ssa grid values of the LUTs to similarity parameter (1-fs is used
 !   for historical reasons since then, the coloumn with the smalest/largest ssa
@@ -635,6 +658,7 @@
     porgfLUTRdinfSSAGrid  = 1.0 - sqrt( (1.0-porgfLUTRdinfSSAGrid)/ &
                            (1.0-porgfLUTRdinfSSAGrid*pofgLUT) )
 
+    do 5 liAlbedoCounter = liAlbedoMin, liAlbedoMax, liAlbedoStep
     do 10 liTauCounter = liTauMin, liTauMax, liTauStep
      do 20 liSZenCounter = liSZenMin, liSZenMax, liSZenStep
       do 30 liPZenCounter = liPZenMin, liPZenMax, liPZenStep
@@ -646,6 +670,7 @@
         fSZen = float(liSZenCounter)/100.0
         fPZen = float(liPZenCounter)/100.0 
         fRelAzm = float(liRelAzmCounter)/100.0
+        fAlbedo = float(liAlbedoCounter)/1000.0
 
 !############# END OF SECTION TO COMMENT IF USED WITHIN SLALOM #################
 
@@ -785,6 +810,18 @@
          fADiff = 1 - fTDiff - fRDiff
         endif
 
+!       Adjust transmission and reflection for background albedo
+!       Plane albeod above computed only for mu0
+!       (fRDiff=dRDInf-ft*fEscape0*fl*exp(-fx)/fn)
+        fTrans = fTrans + (fAlbedo * ft*fEscape0/fn * &
+                 (dRDInf-ft*fEscape*fl*exp(-fx)/fn)) / (1 - fAlbedo * frs)
+!       Diffuse transmittance above computed only for mu0
+!       (fTDiff = =ft*fEscape0/fn)
+        fRefl = fRefl + (fAlbedo * ft*fEscape0/fn * ft*fEscape/fn) / &
+                (1 - fAlbedo * frs)
+        
+
+
 !*******************************************************************************
 !
 !   Print/write output
@@ -795,17 +832,22 @@
 
      if(.not.bFinite  ) then
       write(550,971) fSZen, fPZen, fRelAzm, fSSA, fg, &
-                     fTau, fRefl, fRDiff, frs, fTrans, fTdiff, ft
+                     fAlbedo, fTau, fRefl, fTrans, fRDiff, fTdiff, &
+                     frs,ft
+
      else
       write(550,961) fSZen, fPZen, fRelAzm, fSSA, fg, &
-                     fTau, fRefl, fTrans, fRDiff, fTdiff, frs,ft, &
+                     fAlbedo, fTau, fRefl, fTrans, fRDiff, fTdiff, &
+                     frs,ft, &
                      dRinf, dRDInf, fEscape0, fEscape
+
      endif
 
 
      if(bPrint) then
          print*,' '
          print*,'Final results from program CLOUD:'
+         print*,'albedo:        ', fAlbedo
          print*,'tau:           ', fTau
          print*,'rs:            ', frs
          print*,'t:             ', ft
@@ -827,10 +869,12 @@
 30    continue
 20   continue
 10  continue
+5   continue
 
     close(550)
     close(551)
 
+    print*, '...finished.'
     stop
     end program CLOUD
 
@@ -895,6 +939,9 @@
     chLUTPath,     &
     chLUT_RInf,    &
     fg,            &
+    fAlbedoMin,    &
+    fAlbedoMax,    &
+    fAlbedoStep,   &
     fTauMin,       &
     fTauMax,       &
     fTauStep,      &
