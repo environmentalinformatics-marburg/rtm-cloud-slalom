@@ -1145,10 +1145,11 @@
       read(501,rec=1) prgfNonAbs
       close(501)
       prgfNonAbs = prgfNonAbs / cos( prgfSZen*acos(-1.)/180.)
-      
+            
       open(501,file=chBand02,access='direct',recl=liReclReal)
       read(501,rec=1) prgfAbs
       close(501)
+      prgfAbs = prgfAbs / cos(prgfSZen*acos(-1.)/180.)
       
       if(bAlbedo) then
        open(501,file=chAlbedo01,access='direct',recl=liReclReal)
