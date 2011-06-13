@@ -502,10 +502,6 @@
 !
 !*******************************************************************************
 
-950 format(a8,f15.7)    !! Print final results
-960 format(' szen    pzen  relazm  ssa     g       ' &
-           'tau    Refl   Trans  RDiff  TDiff  rs     t       ' &
-           'dRinf  dRDInf fEsc0  fEsc')
 961 format(3f7.2,f11.7,f8.5,f7.2,6f7.4,4f7.4)
 970 format(' szen    pzen  relazm  ssa     g       ' &
            'tau    Refl   RDiff  rs     Trans  TDiff  t')
@@ -517,7 +513,6 @@
 !
 !*******************************************************************************
 
-    chVersion = '$Revision: 1.44 $'
     print*, ' '
     print*, ' '
     print*, 'Program CLOUD'
@@ -998,7 +993,6 @@
 !*******************************************************************************
  
 950 format(f17.8,8f17.8)  !! Read lut_K.dat content
-951 format(9f10.6)        !! Print lut_K.dat content
 952 format(33i5)          !! Read lut_RInf content
 953 format(10f22.14)      !! Read lut_RdInf.dat content
 
@@ -1492,14 +1486,6 @@
     real(4),dimension(1) :: rgfMinDiffSSA(8)    !! Parameter for 2D interp.
     real(4),dimension(1) :: rgfMinLoc(1)        !! Parameter for 2D interp.
 
-!*******************************************************************************
-! 
-!   Format
-! 
-!*******************************************************************************
-
-950 format(a16,f15.7)    !! Print settings and results from 2D interpolation
- 
 !*******************************************************************************
 ! 
 !   Interpolate value for K with respect to mu0, ssa
