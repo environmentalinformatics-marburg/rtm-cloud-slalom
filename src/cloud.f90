@@ -1,259 +1,33 @@
 !###############################################################################
 !!
-!!  NAME
-!!  Program "CLOUD"
-!!
-!!
-!!  VERSION 
-!!  $Revision: 1.44 $
-!!
-!!
-!!  PURPOSE 
 !!  Calculation of radiative characteristics for optically thick layers.
-!!  Absorbing case.
+!!  Copyright (C) 2005  A. A. Kokhanovsky, T. Nauss
 !!
+!!  This program is free software: you can redistribute it and/or modify
+!!  it under the terms of the GNU General Public License as published by
+!!  the Free Software Foundation, either version 3 of the License, or
+!!  (at your option) any later version.
 !!
-!!  PROCEDURE 
+!!  This program is distributed in the hope that it will be useful,
+!!  but WITHOUT ANY WARRANTY; without even the implied warranty of
+!!  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!!  GNU General Public License for more details.
 !!
+!!  You should have received a copy of the GNU General Public License
+!!  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+!!
+!!  CONTACT 
+!!  Please send any comments, suggestions, criticism, or (for our sake) bug
+!!  reports to nausst@googlemail.com
 !!
 !!  ADDITIONAL REQUIREMENTS 
 !!  Configuration file "cloud.cfg" for definition of initial parameters.
-!!
 !!
 !!  ATTENTION
 !!  If used within SLALOM, several code clocks within the main routine
 !!  (program CLOUD) have to be commented out. Look for "SLALOM" to see what to
 !!  do. In addition, "use CLOUD_Defs" has to be replaced by "use SLALOM_Defs".
 !!
-!!
-!!  CALLING SEQUENCE 
-!!  CLOUD 
-!!
-!!
-!!  COMMENT 
-!!  - none 
-!!
-!!
-!!  LANGUAGE 
-!!  FORTRAN 90/95
-!!
-!!
-!!  COMPILER 
-!!  Intel Visual FORTRAN MS Windows v8.0
-!!  Intel FORTRAN Linux v8.0
-!!
-!!
-!!  CVS INFORMATION 
-!!  $Id: cloud.f90,v 1.44 2008/05/28 06:41:28 tnauss Exp $ 
-!!
-!!
-!!  CONTACT 
-!!  Please send any comments, suggestions, criticism, or (for our sake) bug
-!!  reports to nauss@lcrs.de
-!!
-!! 
-!!  Development
-!!  2003-2008 
-!!  Thomas Nauss, Alexander A. Kokhanovsky
-!!
-!! 
-!!  This program is free software without any warranty and without even the
-!!  implied warranty of merchantability or fitness for a particular purpose. 
-!!  If you use the software you must acknowledge the software and its authors. 
-!!
-!!
-!!  HISTORY 
-!!  $Log: cloud.f90,v $
-!!  Revision 1.44  2008/05/28 06:41:28  tnauss
-!!  Update
-!!  Include pointers for LUTKSSAGrid and LUTRdInfSSAGrid.
-!!
-!!  Revision 1.43  2008/05/20 10:35:55  tnauss
-!!  Update
-!!  Delete some variables no longer necessary.
-!!
-!!  Revision 1.42  2008/05/19 15:12:18  tnauss
-!!  Update
-!!  Include documentation and adjust some lines.
-!!
-!!  Revision 1.41  2008/04/15 18:29:17  tnauss
-!!  Update
-!!  Minor modifications related to the incusion of pointers for the use
-!!  within SLALOM with no consequences for the accuracy of the results.
-!!
-!!  Revision 1.40  2008/04/15 10:21:13  tnauss
-!!  Update
-!!  Include pointers for variables needed for different wavelengths withing
-!!  slalom.
-!!
-!!  Revision 1.39  2008/04/14 10:50:43  tnauss
-!!  Update:
-!!  Include 856 micrometer LUTs.
-!!
-!!  Revision 1.38  2007/07/06 16:30:12  tnauss
-!!  Major update and bug fix:
-!!  Include handling of new LUTs for RInf and corresponding values of g.
-!!  Actual asymmetry parameter will no longer be used for the conversion of
-!!  LUTs for RInf.
-!!
-!!  Revision 1.37  2006/12/11 13:34:35  tnauss
-!!  Update and Bugfix:
-!!  Fix error and change LUT interpolation routines.
-!!
-!!  Revision 1.36  2006/05/31 13:47:51  tnauss
-!!  Update
-!!  Change LUT_Rinf grid to ssa steps of 0.001 between ssa 0.90 and 1.00.
-!!
-!!  Revision 1.35  2006/04/23 09:38:27  tnauss
-!!  Update
-!!  Include option for user defined assymetry parameter.
-!!
-!!  Revision 1.34  2006/04/14 11:57:35  tnauss
-!!  Update
-!!  Rename asymp to CLOUD.
-!!
-!!  Revision 1.33  2006/04/13 14:46:49  tnauss
-!!  Update
-!!  Document some more stuff.
-!!
-!!  Revision 1.32  2006/03/27 17:38:59  tnauss
-!!  Revision
-!!  Implement LUT-interpolation with respect to similarity parameter instead
-!!  of actual ssa in order to correct for different values of the asymmetry
-!!  parameter since LUTs have been computed for g=0.8500.
-!!
-!!  Revision 1.31  2006/03/27 14:40:15  tnauss
-!!  Update
-!!  Document some stuff.
-!!
-!!  Revision 1.30  2006/03/26 10:11:23  tnauss
-!!  Update
-!!  Include computation for semi-infinite media.
-!!
-!!  Revision 1.29  2006/03/24 21:45:34  tnauss
-!!  Update
-!!  Include LUTs for RInf for zenith angles between 0 and 89 degree.
-!!
-!!  Revision 1.28  2006/03/23 16:41:13  tnauss
-!!  Update
-!!  Include ice cloud LUT for Rinf.
-!!
-!!  Revision 1.27  2006/03/20 12:59:09  tnauss
-!!  Update
-!!  Update computation of reflection function for 0.999<=ssa<1.000.
-!!
-!!  Revision 1.26  2006/03/20 12:08:49  tnauss
-!!  Update
-!!  Change data types in subroutine CLOUD_1DInterpolation.
-!!
-!!  Revision 1.25  2006/03/20 09:41:34  tnauss
-!!  Update
-!!  Include new routine for reflection function at ssa=0.9990
-!!
-!!  Revision 1.24  2006/03/19 11:02:56  tnauss
-!!  Bugfix
-!!  Fix bug at computation for 0.999 < ssa < 1.000.
-!!
-!!  Revision 1.23  2006/03/18 15:23:50  tnauss
-!!  Bugfix and update
-!!  Fix computation for reflection function at ssa=1.
-!!  Include new routine for reflectoin function for 0.999<=ssa<1.000.
-!!
-!!  Revision 1.22  2006/03/17 12:36:34  tnauss
-!!  Update
-!!  Include 650 micrometer LUT.
-!!
-!!  Revision 1.21  2006/03/16 09:43:17  tnauss
-!!  Revision
-!!  Change code for compilation with gnu 95.
-!!
-!!  Revision 1.20  2006/03/15 08:22:09  tnauss
-!!  Update
-!!  Disable command line configuration.
-!!
-!!  Revision 1.19  2006/03/13 22:01:27  tnauss
-!!  Update
-!!  Include initial SACURA equations for ssa larger 0.990.
-!!
-!!  Revision 1.18  2006/03/13 19:39:30  tnauss
-!!  Update
-!!  Store everything in one file.
-!!
-!!  Revision 1.17  2006/03/13 19:20:01  tnauss
-!!  Update
-!!  Include command line argument configuration.
-!!
-!!  Revision 1.16  2006/01/14 16:29:52  tnauss
-!!  Update
-!!  Interpolation of R_infinite is now computed with respect to sqrt(1-ssa).
-!!
-!!  Revision 1.15  2006/01/14 16:12:32  tnauss
-!!  Update
-!!  Include print/pause optinons in cfg file.
-!!
-!!  Revision 1.14  2006/01/13 17:05:23  tnauss
-!!  Major update
-!!  Split CLOUD.f90 into several files - one for each subroutine/module.
-!!  Include 4D interpolation for LUT values of R_infinite.
-!!
-!!  Revision 1.13  2006/01/04 15:37:26  TNauss
-!!  Bug fix
-!!  Fix bug related to 3D interpolation of R_infinite.
-!!
-!!  Revision 1.12  2005/12/31 16:08:19  TNauss
-!!  Update
-!!  Include LUT interpolation for plane albedo of semi-infinite
-!!  layer.
-!!
-!!  Revision 1.11  2005/12/23 16:30:00  TNauss
-!!  Update
-!!  Define all variables explicit
-!!
-!!  Revision 1.10  2005/12/23 10:44:42  TNauss
-!!  Bug fix
-!!  Delete second copy of subroutine CLOUD_ReadSettings
-!!
-!!  Revision 1.9  2005/12/22 12:57:15  tnauss
-!!  Bug fix.
-!!  Change Mu to Mu0 in some equations.
-!!
-!!  Revision 1.8  2005/12/22 12:07:23  tnauss
-!!  Modification
-!!  Change of output format.
-!!
-!!  Revision 1.7  2005/12/22 11:55:50  tnauss
-!!  Update
-!!  Multi-angle computation is now possible.
-!!
-!!  Revision 1.6  2005/12/21 16:30:43  tnauss
-!!  Update
-!!  Include multi-angle computation.
-!!
-!!  Revision 1.5  2005/12/17 15:21:06  tnauss
-!!  Bugfix
-!!  2D interpolation for mu had no valid lut array for boundary value
-!!  computation.
-!!
-!!  Revision 1.4  2005/12/08 23:24:46  tnauss
-!!  Update
-!!  Include LUT for R_infinite(szen,pzen,relazm,ssa).
-!!  Include 3D interpolation of LUT values of R_infinite(szen,pzen,relazm).
-!!  Include input parameter configuration via configuration file cloud.cfg.
-!!
-!!  Revision 1.3  2005/12/08 18:35:20  tnauss
-!!  Bug fix
-!!  Fix bug for the case that given values for the 2D combination equal gridded
-!!  values.
-!!
-!!  Revision 1.2  2005/12/08 14:40:54  tnauss
-!!  Bug fix
-!!  Check for NaN and division by 0.0
-!!
-!!  Revision 1.1.1.1  2005/12/08 08:58:07  tnauss
-!!  Calculation of radiative characteristics for optically thick layers.
-!!  Absorbing case.
-!! 
-!! 
 !###############################################################################
 
 !###############################################################################
@@ -524,11 +298,23 @@
 !
 !*******************************************************************************
 
-    chVersion = "2011-06-13"
+    print*, ' '
+    print*, 'CLOUD Copyright (C) 2006  A. A. Kokhanovsky, T. Nauss'
+    print*, ' '
+    print*, 'This program is free software: you can redistribute it and/or modify'
+    print*, 'it under the terms of the GNU General Public License as published by'
+    print*, 'the Free Software Foundation, either version 3 of the License, or'
+    print*, '(at your option) any later version.'
+    print*, ' '
+    print*, 'This program is distributed in the hope that it will be useful,'
+    print*, 'but WITHOUT ANY WARRANTY; without even the implied warranty of'
+    print*, 'MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the'
+    print*, 'GNU General Public License for more details.'
+    print*, ' '
+    print*, 'You should have received a copy of the GNU General Public License'
+    print*, 'along with this program.  If not, see <http://www.gnu.org/licenses/>.'
     print*, ' '
     print*, ' '
-    print*, 'Program CLOUD'
-    print*, trim(chVersion)
 
 !*******************************************************************************
 !

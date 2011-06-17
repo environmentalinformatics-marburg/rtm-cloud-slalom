@@ -1,12 +1,25 @@
 !###############################################################################
 !!
-!!  NAME
-!!  Program "SLALOM"
+!!  Simulate error propagation in SLALOM (see doi: 10.1016/j.rse.2011.01.010).
+!!  Copyright (C) 2006  A. A. Kokhanovsky, T. Nauss
+!!
+!!  This program is free software: you can redistribute it and/or modify
+!!  it under the terms of the GNU General Public License as published by
+!!  the Free Software Foundation, either version 3 of the License, or
+!!  (at your option) any later version.
+!!
+!!  This program is distributed in the hope that it will be useful,
+!!  but WITHOUT ANY WARRANTY; without even the implied warranty of
+!!  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!!  GNU General Public License for more details.
+!!
+!!  You should have received a copy of the GNU General Public License
+!!  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 !!
 !!
-!!  VERSION 
-!!  $Revision: 1.7 $
-!!
+!!  CONTACT 
+!!  Please send any comments, suggestions, criticism, or (for our sake) bug
+!!  reports to nausst@googlemail.com
 !!
 !!  PURPOSE 
 !!  Inverse algorithm for the retrieval of the cloud optical thickness (COT), 
@@ -15,7 +28,6 @@
 !!  (PAL) for optically thick layers. The forward model used within SLALOM is
 !!  CLOUD.
 !!
-!! 
 !!  PROCEDURE 
 !!  This program consists of three basic parts:
 !!  1. Read/write and control routines (all in the main SLALOM program)
@@ -35,16 +47,11 @@
 !!  for an easier copy/paste of new versions of CLOUD in this code - so don't
 !!  worry about that.
 !!
-!!
-!!  ADDITIONAL REQUIREMENTS
-!!  none
-!!
 !!  ATTENTION 
 !!  If ASCII input is used, the ASCII file must contain the following parameters
 !!  in exactly the same order:
 !!  sun zenith, pixel zenith, relative azimuth, 
 !!  reflection non-absorbing channel, and reflection absorbing channel.
-!!
 !!
 !!  CALLING SEQUENCE 
 !!  Usage if binary input (bi = 1):
@@ -70,12 +77,12 @@
 !!  <razm>  Filename for the relative azimuth angle data (real 4).
 !!  <cmask> Filename for the cloud mask (integer 2).
 !!  <mask>  Filename for the computation mask (integer 2).
-!!  <tau>   Filename for the optical thickness (output).
-!!  <aef>   Filename for the effective droplet radius (output)
-!!  <lwp>   Filename for the liquid water path (output)
-!!  <iwp>   Filename for the ice water path (output)
-!!  <ssa>   Filename for the single scattering albedo (output)
-!!  <pal>   Filename for the particle absorption length (output)
+!!  <tau>   Filename for the optical thickness (output), without .rst.
+!!  <aef>   Filename for the effective droplet radius (output), without .rst
+!!  <lwp>   Filename for the liquid water path (output), without .rst
+!!  <iwp>   Filename for the ice water path (output), without .rst
+!!  <ssa>   Filename for the single scattering albedo (output), without .rst
+!!  <pal>   Filename for the particle absorption length (output), without .rst
 !!  <cols>  Number of columns in the input binary datasets.
 !!  <rows>  Number of rows in the input binary datasets.
 !!  <alb>   Use albedo different from 0.0 (1 = yes, 0 = no).
@@ -83,82 +90,6 @@
 !!  <alb2>  Filename for the absorbing albedo data (real 4)
 !!  <indat> Filename for the input ASCII dataset
 !!  <outdat> Filename for the output ASCII dataset
-!!
-!!
-!!  COMMENT 
-!! 
-!!  LANGUAGE 
-!!  FORTRAN 90/95 
-!!
-!!
-!!  COMPILER 
-!!  Any intel compiler should do
-!!
-!!
-!!  CVS INFORMATION 
-!!  $Id: slalom.f90,v 1.7 2008/08/26 14:21:51 tnauss Exp $ 
-!!
-!!
-!!  CONTACT 
-!!  Please send any comments, suggestions, criticism, or (for our sake) bug
-!!  reports to nauss@lcrs.de
-!!
-!!
-!!  Development
-!!  2003-2008 
-!!  Thomas Nauss, Alexander A. Kokhanovsky
-!!
-!!
-!!  This program is free software without any warranty and without even the
-!!  implied warranty of merchantability or fitness for a particular purpose. 
-!!  If you use the software you must acknowledge the software and its authors. 
-!!
-!!
-!!  HISTORY
-!!  $Log: slalom.f90,v $
-!!  Revision 1.7  2008/08/26 14:21:51  tnauss
-!!  Update
-!!  Include cloud geometrical thickness and droplet concentration retrieval.
-!!
-!!  Revision 1.6  2008/08/26 07:06:35  tnauss
-!!  Update
-!!  Include test function in SLALOM code (i. e. known tau and aef is read from
-!!  the ASCII input file in addition to the measurement data and error between
-!!  tau and aef input and output is computed in addition).
-!!
-!!  Revision 1.5  2008/05/20 10:47:06  tnauss
-!!  Update
-!!  Include ASCII file in- and output.
-!!
-!!  Revision 1.4  2008/05/19 17:18:01  tnauss
-!!  Update
-!!  Remove test codelines, include command line calling and include some more
-!!  documentation.
-!!
-!!  Revision 1.3  2008/04/15 18:37:56  tnauss
-!!  Major update
-!!  Include pointers for a seamless integration of the CLOUD program sources
-!!  (starting from CLOUD 1.41).
-!!
-!!  Revision 1.2  2007/11/29 15:09:31  tnauss
-!!  Update
-!!
-!!  Revision 1.7  2007/07/19 10:11:09  tnauss
-!!  Major revision (still test phase)
-!!  Include routines for 2nd LUT for abs. channel.
-!!
-!!  Revision 1.6  2007/03/22 17:08:32  tnauss
-!!  Bugfix
-!!  1001 things have been changed.
-!!
-!!  Revision 1.4  2006/10/31 16:52:34  tnauss
-!!  Update
-!!
-!!  Revision 1.2  2006/03/25 11:56:39  tnauss
-!!  Minor bug fixes.
-!!
-!!  Revision 1.1.1.1  2006/03/24 23:19:26  tnauss
-!!  Retrieval of ice cloud parameters.
 !!
 !###############################################################################
 
@@ -597,13 +528,21 @@
     print*, ' '
     print*, ' '
     print*, '##################################################################'
-    print*, 'Program SLALOM'
-    print*, chVersion
     print*, ' '
-    print*, 'Forward model CLOUD'
-    print*, 'Revision: 1.43'
+    print*, 'SLALOM  Copyright (C) 2006  A. A. Kokhanovsky, T. Nauss'
     print*, ' '
-    print*, '2006-2008, Thomas Nauss, Alexander A. Kokhanovsky'
+    print*, 'This program is free software: you can redistribute it and/or modify'
+    print*, 'it under the terms of the GNU General Public License as published by'
+    print*, 'the Free Software Foundation, either version 3 of the License, or'
+    print*, '(at your option) any later version.'
+    print*, ' '
+    print*, 'This program is distributed in the hope that it will be useful,'
+    print*, 'but WITHOUT ANY WARRANTY; without even the implied warranty of'
+    print*, 'MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the'
+    print*, 'GNU General Public License for more details.'
+    print*, ' '
+    print*, 'You should have received a copy of the GNU General Public License'
+    print*, 'along with this program.  If not, see <http://www.gnu.org/licenses/>.'
     print*, ' '
     print*, ' '
     print*, 'Usage if binary input (bi = 1):'
