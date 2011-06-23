@@ -1,7 +1,7 @@
 Command line sequenze that can be used to test SLALOM with included dataset.
 Output from SLALOM should equal content of output_correct_20080520_test.dat.
 
-./a.out 0 1 0.856 1.630 ../../luts/ lut_RInf_0856_aef_10.dat lut_RInf_1630_aef_10.dat 1 input_correct_20080520.dat output_correct_20080520.dat 1
+./a.out slalom 0 1 0.856 1.630 ../../luts/ lut_RInf_0856_aef_10.dat lut_RInf_1630_aef_10.dat 1 input_correct_20080520.dat output_correct_20080520.dat 1
 
 Replace a.out with the name of your SLALOM executable.
 To compile SLALOM using gfortran type: gfortran -ffree-line-length-none slalom.f90
