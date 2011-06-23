@@ -2769,7 +2769,6 @@ subroutine cloud
     !**********************************************************************
 
     open(550,file=trim(rgchOutFile(1)))
-    write(550,*) 'Version: ',trim(chVersion)
 
     if(.not.bFinite  ) then
         write(550,970) 'fSZen','fPZen','fRelAzm','fSSA','fg', &
