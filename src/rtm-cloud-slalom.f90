@@ -1117,6 +1117,7 @@ subroutine slalom
     ! Read runtime settings
     !**********************************************************************
 
+    call slalomSetParameters
     call slalomReadSettings
     call slalomPrintSettings
 
@@ -1241,7 +1242,6 @@ subroutine slalom
 end subroutine slalom
 
 
-
 !###############################################################################
 !!
 !!  Subroutine slalomConfigure
@@ -1257,22 +1257,6 @@ subroutine slalomConfigure
 
     use rcsDefs
     implicit none
-
-    !**********************************************************************
-    ! Set parameters
-    !**********************************************************************
-
-    bPause         = .FALSE.
-    bPrint         = .FALSE.
-    bError         = .FALSE.
-    bAlbedo        = .FALSE.
-    bFinite        = .TRUE.
-    fRho           = 1.0
-    fSSAMinValid   = 0.8d0
-    fSSAMaxValid   = 1.0d0
-    fAefMinValid   = 3.0
-    fAefMaxValid   = 40.0
-    fPi            = acos(-1.)
 
     !**********************************************************************
     ! Allocate and initialize arrays
@@ -2556,6 +2540,43 @@ end subroutine slalomRefractiveIndex
 
     return
 end subroutine slalomRetrieve
+
+
+!###############################################################################
+!!
+!!  Subroutine slalomSetParameters
+!!  Set configuration variables and parameters.
+!!
+!###############################################################################
+
+subroutine slalomSetParameters
+
+    !**********************************************************************
+    ! Declaration of variables
+    !**********************************************************************
+
+    use rcsDefs
+    implicit none
+
+    !**********************************************************************
+    ! Set parameters
+    !**********************************************************************
+
+    bPause         = .FALSE.
+    bPrint         = .FALSE.
+    bError         = .FALSE.
+    bAlbedo        = .FALSE.
+    bFinite        = .TRUE.
+    fRho           = 1.0
+    fSSAMinValid   = 0.8d0
+    fSSAMaxValid   = 1.0d0
+    fAefMinValid   = 3.0
+    fAefMaxValid   = 40.0
+    fPi            = acos(-1.)
+    fAlbedo        = 0.0E0  ! albedo value used for cloud
+
+    return
+end subroutine slalomSetParameters
 
 
 !###############################################################################
